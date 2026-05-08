@@ -1,0 +1,163 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # LIVELLO 1: INFRASTRUTTURA DATI
+  # ==========================================
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    ports:
+      - "5432:5432" # Aperta per pgAdmin locale
+    environment:
+      POSTGRES_USER: root_admin
+      POSTGRES_PASSWORD: root_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - db-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 384M # Più che sufficiente per test locali
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  rabbitmq-broker:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq-broker
+    ports:
+      - "15672:15672" # Dashboard visiva
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: gamems_vhost # Isolamento logico
+    networks:
+      - backend-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ==========================================
+  # LIVELLO 2: MICROSERVIZI CORE
+  # ==========================================
+  user-service:
+    build: 
+      context: ./user-service
+    container_name: user-service
+    environment:
+      - DB_HOST=postgres-db
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    networks:
+      - backend-net
+      - db-net
+    depends_on:
+      - postgres-db
+
+  wallet-service:
+    build: 
+      context: ./wallet-service
+    container_name: wallet-service
+    environment:
+      - DB_HOST=postgres-db
+      - RABBIT_HOST=rabbitmq-broker
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    networks:
+      - backend-net
+      - db-net
+    depends_on:
+      - postgres-db
+      - rabbitmq-broker
+
+  game-service:
+    build: 
+      context: ./game-service
+    container_name: game-service
+    environment:
+      - DB_HOST=postgres-db
+      - RABBIT_HOST=rabbitmq-broker
+      - WALLET_HOST=wallet-service
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    networks:
+      - backend-net
+      - db-net
+    depends_on:
+      - postgres-db
+      - rabbitmq-broker
+      - wallet-service
+
+  # ==========================================
+  # LIVELLO 3: API GATEWAY (Punto d'accesso)
+  # ==========================================
+  api-gateway:
+    build: 
+      context: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080" # L'UNICA PORTA DELL'APP ESPOSTA SU INTERNET
+    networks:
+      - frontend-net
+      - backend-net
+    depends_on:
+      - user-service
+      - wallet-service
+      - game-service
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+
+# ==========================================
+# DEFINIZIONE RETI ISOLATE E VOLUMI
+# ==========================================
+networks:
+  frontend-net:
+    driver: bridge # Rete per il traffico Web -> Gateway
+  backend-net:
+    driver: bridge # Rete interna per Gateway -> Microservizi -> Rabbit
+    internal: true
+  db-net:
+    driver: bridge # Rete blindata per Microservizi -> DB
+    internal: true # Rete isolata dal mondo esterno
+
+volumes:
+  postgres-data:

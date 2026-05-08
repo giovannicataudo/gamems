@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+# Configurazione della Sicurezza
+app:
+  api-key: "LaTuaApiKeyEsternaSegreta2026!"
+  jwt:
+    secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+
+# Monitoraggio
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

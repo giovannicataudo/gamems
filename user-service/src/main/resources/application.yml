@@ -1,0 +1,45 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/user_db
+    username: ${DB_USER:user_user}
+    password: ${DB_PASS:user_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+# Configurazione Sicurezza e JWT
+app:
+  jwt:
+    # Segreta usata per firmare i token. In produzione va caricata da Vault o ENV.
+    secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+    # Durata del token (es. 24 ore in millisecondi)
+    expiration-ms: 86400000
+# Un JWT è una stringa così formata: header.payload.signature
+# Header: contiene le info tecniche del token (es. algoritmo e tipo)
+# Payload: contiene i dati reali dell'utente (email, ruolo, validità token, user)
+# Signature: calcolata tramite algoritmo crittografico utilizzando header, payload
+# (in base64) e la chiave (nel nostro caso secret in chiaro qui sopra)
+# il JWT, rilasciato da noi al momento del login, garantisce per tutta la sua durata
+# l'autenticazione dell'utente perchè in caso di furto e manomissione quando ricalcolato
+# dall'API gataway darà un risultato differente (impossibile provare ad entrare come altro
+# utente con un toker rubato). è possibile il "furto di identità" soprattutto con una durata
+# troppo lunga del token, perchè se rubato si può fare accesso fingendosi quell'utente.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
