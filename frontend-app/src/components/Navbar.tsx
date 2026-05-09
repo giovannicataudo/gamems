@@ -34,6 +34,9 @@ export default function Navbar() {
             <Link title="Gioca ora" to="/play" className="hover:text-emerald-400 transition-colors">
                 Lancia Moneta
             </Link>
+            <Link to="/wallet" className="hover:text-emerald-400 transition-colors">
+                Cassa
+            </Link>
             <Link title="Le tue partite" to="/history" className="hover:text-emerald-400 transition-colors">
                 Storico
             </Link>

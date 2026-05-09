@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import Navbar from './components/Navbar';
 import PlayPage from './pages/PlayPage';
+import WalletPage from './pages/WalletPage';
 import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
@@ -30,6 +31,12 @@ export default function App() {
             path="/play" 
             element={user ? <PlayPage /> : <Navigate to="/login" />} 
           />
+
+          <Route 
+            path="/wallet" 
+            element={user ? <WalletPage /> : <Navigate to="/login" />} 
+          />
+          
           <Route 
             path="/history" 
             element={user ? <HistoryPage /> : <Navigate to="/login" />} 
