@@ -1,0 +1,37 @@
+K8s e Concorrenze di Scrittura: 
+Questo è un tema puramente backend/database. 
+Quando un utente clicca "Gioca" ripetutamente (spamming), 
+Kubernetes potrebbe scalare i pod del GameService o del WalletService. 
+Se due richieste per lo stesso utente arrivano contemporaneamente, 
+potresti avere una Race Condition sul database PostgreSQL (saldo che va in negativo). 
+Impatto sul Frontend: Nessuno. 
+Soluzione Backend: Dovrai implementare l'Optimistic Locking 
+(annotazione @Version di JPA sulle tue Entity) e gestire la OptimisticLockException 
+restituendo un HTTP 409 Conflict, che il frontend mostrerà come "Elaborazione in corso, 
+riprova tra un istante".
+
+Rate Limiting sul Gateway: 
+Eccellente idea per prevenire DDoS o spam. 
+Impatto sul Frontend: Il Gateway inizierà a restituire HTTP 429 (Too Many Requests).
+Il nostro axiosClient.ts dovrà essere aggiornato per intercettare il 429 
+e mostrare un messaggio amichevole ("Stai facendo troppe richieste, rallenta").
+
+Gestione Credenziali in chiaro (yml): 
+Classico problema da ambiente di sviluppo. 
+Impatto sul Frontend: Nessuno. Soluzione Backend: 
+In produzione, passerai a variabili d'ambiente passate 
+tramite ConfigMap/Secrets di Kubernetes o HashiCorp Vault.
+
+axiosClient.ts gestisce l'invio del token, 
+ma non gestisce la sua scadenza. Se il JWT scade, 
+il backend restituisce 401 Unauthorized, ma l'utente rimarrà 
+incastrato in una schermata apparentemente rotta.
+
+il ban funziona ma non è istantaneo
+prova soluzione tramite broker e Gateway
+
+puoi implementare ban per troppi tentaivi falliti
+
+token ogni 24 ore (scegli che fare)
+
+attenzione a show-detaisl:always negli application.yml
