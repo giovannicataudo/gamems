@@ -20,7 +20,7 @@ import java.util.List;
  * ========================================================
  * FILTER: JwtAuthenticationFilter (Lightweight)
  * ========================================================
- * Intercetta ogni richiesta al wallet-service.
+ * Intercetta ogni richiesta al game-service.
  * A differenza dell'Identity Service, NON interroga il database.
  * Si fida ciecamente dei claims (ruolo e ID) estratti dal JWT,
  * a patto che la firma del token sia matematicamente valida.

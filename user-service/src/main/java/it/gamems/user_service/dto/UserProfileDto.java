@@ -14,6 +14,7 @@ public record UserProfileDto(
         Long id,
         String email,
         String role,
+        Boolean enabled,
         LocalDateTime createdAt
 ) {
 }

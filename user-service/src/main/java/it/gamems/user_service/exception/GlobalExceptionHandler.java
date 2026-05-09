@@ -1,9 +1,11 @@
 package it.gamems.user_service.exception;
 
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -75,6 +77,16 @@ public class GlobalExceptionHandler {
                 "Metodo HTTP non supportato per questa rotta. Metodi ammessi: " + supportedMethods
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<Object> handleDisabledException(DisabledException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN) // 403 Forbidden
+                .body(Map.of(
+                    "message", "Sei stato bannato. Contatta l'assistenza clienti per maggiori informazioni.",
+                    "status", HttpStatus.FORBIDDEN.value()
+                ));
     }
 
     // 4. Fallback: Errore imprevisto del server -> 500 INTERNAL SERVER ERROR

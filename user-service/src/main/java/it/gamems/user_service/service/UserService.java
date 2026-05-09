@@ -39,6 +39,7 @@ public class UserService {
                 user.getId(),
                 user.getEmail(),
                 user.getRole().name(),
+                user.getEnable(),
                 user.getCreatedAt()
         );
     }
@@ -53,6 +54,7 @@ public class UserService {
                         user.getId(),
                         user.getEmail(),
                         user.getRole().name(),
+                        user.getEnable(),
                         user.getCreatedAt()
                 ))
                 .collect(Collectors.toList());

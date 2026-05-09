@@ -154,10 +154,10 @@ networks:
     driver: bridge # Rete per il traffico Web -> Gateway
   backend-net:
     driver: bridge # Rete interna per Gateway -> Microservizi -> Rabbit
-    internal: true
+    #internal: true
   db-net:
     driver: bridge # Rete blindata per Microservizi -> DB
-    internal: true # Rete isolata dal mondo esterno
+    #internal: true # Rete isolata dal mondo esterno
 
 volumes:
   postgres-data:

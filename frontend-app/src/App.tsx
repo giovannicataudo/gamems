@@ -4,10 +4,8 @@ import Navbar from './components/Navbar';
 import PlayPage from './pages/PlayPage';
 import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 import { useAuth } from './context/AuthContext';
-
-// --- SEGNAPOSTI (Li riempiremo nei prossimi step) ---
-const AdminPage = () => <div className="p-10 text-white">🛠️ Qui l'admin gestisce Utenti e Wallet</div>;
 
 export default function App() {
   const { user } = useAuth();

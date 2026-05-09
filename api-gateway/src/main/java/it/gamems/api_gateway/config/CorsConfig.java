@@ -37,8 +37,8 @@ public class CorsConfig {
         // Abilitiamo i verbi HTTP necessari per le nostre API (CRUD e OPTIONS per il pre-flight del browser).
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         
-        // 3. HEADERS CONSENTITI (messo tutti per debug)
-        config.setAllowedHeaders(List.of("*"));
+        // 3. HEADERS CONSENTITI
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Api-Key"));
         
         // Esponiamo l'header Authorization nel caso il frontend abbia bisogno di leggerlo dalle risposte.
         config.addExposedHeader("Authorization");
