@@ -28,9 +28,8 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         
         // 1. ORIGINI CONSENTITE (Chi può chiamarci?)
-        // AGGIUNTO: http://localhost:5173 per il frontend Vite
         config.setAllowedOrigins(List.of(
-            "http://localhost:5173"
+            "http://localhost:8080"
         ));
         
         // 2. METODI CONSENTITI (Cosa possono fare?)

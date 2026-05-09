@@ -35,3 +35,5 @@ puoi implementare ban per troppi tentaivi falliti
 token ogni 24 ore (scegli che fare)
 
 attenzione a show-detaisl:always negli application.yml
+
+devi chiudere porte e reti da dbs e broker

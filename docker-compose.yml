@@ -126,8 +126,8 @@ services:
     build: 
       context: ./api-gateway
     container_name: api-gateway
-    ports:
-      - "8080:8080" # L'UNICA PORTA DELL'APP ESPOSTA SU INTERNET
+    expose:
+      - 8080
     networks:
       - frontend-net
       - backend-net
@@ -145,6 +145,29 @@ services:
         reservations:
           cpus: '0.1'
           memory: 256M
+
+  # ==========================================
+  # LIVELLO 4: FRONTEND & REVERSE PROXY
+  # ==========================================
+  frontend-app:
+    build: 
+      context: ./frontend-app
+    container_name: frontend-app
+    ports:
+      - "8080:80" # Il tuo PC (8080) punta a Nginx (80)
+    networks:
+      - frontend-net
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
 
 # ==========================================
 # DEFINIZIONE RETI ISOLATE E VOLUMI

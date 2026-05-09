@@ -11,10 +11,10 @@ import axios from 'axios';
 
 // Creiamo un'istanza personalizzata di Axios
 export const apiClient = axios.create({
-  // Questo è l'indirizzo dell' API Gateway
-  // Tutte le chiamate partiranno da qui. Es: apiClient.post('/auth/login') 
-  // diventerà automaticamente http://localhost:8080/api/v1/auth/login
-  baseURL: 'http://localhost:8080/api/v1',
+  // Impostiamo un percorso relativo in modo che il
+  // browser chieda le api allo stesso server su cui
+  // è esposto il front
+  baseURL: '/api/v1',
   
   // Diciamo al backend che parleremo sempre in JSON
   headers: {
