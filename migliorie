@@ -22,18 +22,12 @@ Impatto sul Frontend: Nessuno. Soluzione Backend:
 In produzione, passerai a variabili d'ambiente passate 
 tramite ConfigMap/Secrets di Kubernetes o HashiCorp Vault.
 
-axiosClient.ts gestisce l'invio del token, 
-ma non gestisce la sua scadenza. Se il JWT scade, 
-il backend restituisce 401 Unauthorized, ma l'utente rimarrà 
-incastrato in una schermata apparentemente rotta.
-
 il ban funziona ma non è istantaneo
-prova soluzione tramite broker e Gateway
-
-puoi implementare ban per troppi tentaivi falliti
+prova soluzione tramite user->broker<-api
 
 token ogni 24 ore (scegli che fare)
 
 attenzione a show-detaisl:always negli application.yml
+capisci se le usi su Kubernetes o togliele
 
-devi chiudere porte e reti da dbs e broker
+devi chiudere porte e reti nel compose

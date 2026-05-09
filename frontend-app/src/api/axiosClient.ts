@@ -56,3 +56,41 @@ apiClient.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * ========================================================
+ * INTERCEPTOR DELLE RISPOSTE (Filtro Entrante)
+ * ========================================================
+ * Questo blocco viene eseguito automaticamente DOPO che il 
+ * backend ha risposto, ma PRIMA che la risposta arrivi al 
+ * componente React che ha fatto la chiamata.
+ */
+apiClient.interceptors.response.use(
+  (response) => {
+    // Se la chiamata è andata a buon fine (Status 2xx), passa oltre
+    return response;
+  },
+  (error) => {
+    // Se c'è un errore, controlliamo se è un 401 Unauthorized
+    if (error.response && error.response.status === 401) {
+
+      const requestUrl = error.config?.url || '';
+
+      if (!requestUrl.includes('/auth/login')) {
+        console.warn("🔐 Token scaduto o non valido. Disconnessione di sicurezza in corso.");
+      
+        // 1. Pulisci il LocalStorage dai dati sensibili
+        localStorage.removeItem('jwt_token');
+      
+        // Se nel tuo AuthContext salvi anche l'utente in locale, rimuovilo (sostituisci la chiave se diversa)
+        localStorage.removeItem('user'); 
+      
+        // 2. Forza il redirect alla pagina di login
+        window.location.href = '/login?expired=true';
+      }
+    }
+
+    // Se l'errore non viene intercettato viene passato oltre
+    return Promise.reject(error);
+  }
+);

@@ -16,7 +16,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - db-net
+      - db-wallet-net
+      - db-user-net
+      - db-game-net
     restart: unless-stopped
     deploy:
       resources:
@@ -67,7 +69,7 @@ services:
           memory: 256M
     networks:
       - backend-net
-      - db-net
+      - db-user-net
     depends_on:
       - postgres-db
 
@@ -89,7 +91,7 @@ services:
           memory: 256M
     networks:
       - backend-net
-      - db-net
+      - db-wallet-net
     depends_on:
       - postgres-db
       - rabbitmq-broker
@@ -113,7 +115,7 @@ services:
           memory: 256M
     networks:
       - backend-net
-      - db-net
+      - db-game-net
     depends_on:
       - postgres-db
       - rabbitmq-broker
@@ -174,13 +176,18 @@ services:
 # ==========================================
 networks:
   frontend-net:
-    driver: bridge # Rete per il traffico Web -> Gateway
+    driver: bridge
   backend-net:
-    driver: bridge # Rete interna per Gateway -> Microservizi -> Rabbit
+    driver: bridge
+  db-user-net:
+    driver: bridge
     #internal: true
-  db-net:
-    driver: bridge # Rete blindata per Microservizi -> DB
-    #internal: true # Rete isolata dal mondo esterno
+  db-wallet-net:
+    driver: bridge
+    #internal: true
+  db-game-net:
+    driver: bridge
+    #internal: true
 
 volumes:
   postgres-data:

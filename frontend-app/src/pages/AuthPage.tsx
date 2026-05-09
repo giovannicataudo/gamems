@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/axiosClient';
 // La chiave della "cassaforte" globale
 import { useAuth } from '../context/AuthContext';
+// Per cercare parametri
+import { useSearchParams } from 'react-router-dom';
 
 export default function AuthPage() {
   // --- 1. GESTIONE DELLO STATO (Le variabili di questa pagina) ---
@@ -18,6 +20,10 @@ export default function AuthPage() {
   // Importiamo gli strumenti globali
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Ricerca del parametro per la scadenza del token
+  const [searchParams] = useSearchParams();
+  const isExpired = searchParams.get('expired') === 'true';
 
   // --- 2. GESTIONE DELL'INVIO DEL FORM ---
   // Questa funzione scatta quando l'utente preme il bottone "Accedi/Registrati"
@@ -70,6 +76,12 @@ export default function AuthPage() {
         {errorMsg && (
           <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded mb-4 text-sm">
             {errorMsg}
+          </div>
+        )}
+
+        {isExpired && (
+          <div className="bg-amber-500/10 border border-amber-500 text-amber-500 p-3 rounded text-sm mb-4 text-center">
+          La tua sessione è scaduta per inattività. Effettua di nuovo l'accesso.
           </div>
         )}
 

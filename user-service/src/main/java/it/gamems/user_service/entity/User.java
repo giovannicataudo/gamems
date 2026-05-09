@@ -50,6 +50,13 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    // Campi per la prevenzione del brute force
+    @Column(name = "failed_login_attempts", columnDefinition = "integer default 0")
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "lockout_end")
+    private LocalDateTime lockoutEnd;
+
     // --- Metodi per scrivere in automatico le datetime ---
 
     @PrePersist
@@ -118,4 +125,11 @@ public class User implements UserDetails {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public Integer getFailedLoginAttempts() {
+        return failedLoginAttempts == null ? 0 : failedLoginAttempts;}
+    public void setFailedLoginAttempts(Integer failedLoginAttempts) { this.failedLoginAttempts = failedLoginAttempts; }
+    
+    public LocalDateTime getLockoutEnd() { return lockoutEnd; }
+    public void setLockoutEnd(LocalDateTime lockoutEnd) { this.lockoutEnd = lockoutEnd; }
 }

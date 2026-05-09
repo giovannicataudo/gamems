@@ -8,7 +8,13 @@ import it.gamems.user_service.enums.Role;
 import it.gamems.user_service.exception.UserAlreadyExistsException;
 import it.gamems.user_service.repository.UserRepository;
 import it.gamems.user_service.security.JwtService;
+
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +45,10 @@ public class AuthService {
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
     }
+
+    // Costanti di configurazione per la sicurezza
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int LOCKOUT_DURATION_MINUTES = 15;
 
     /**
      * REGISTRAZIONE: Crea un nuovo utente.
@@ -76,25 +86,57 @@ public class AuthService {
 
     /**
      * LOGIN: Valida le credenziali.
-     * 1. L'AuthenticationManager interroga il CustomUserDetailsService.
-     * 2. Se le credenziali sono errate, viene lanciata un'eccezione automatica.
-     * 3. Se corrette, viene generato un nuovo token.
      */
     public AuthResponseDto login(LoginRequestDto request) {
-        // Questa chiamata verifica email e password (con BCrypt)
-        // Viene chiamato il "nostro" authenticationManager 
-        // in SecurityConfig presente nell'application context
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
-
-        // Se arriviamo qui, l'autenticazione ha avuto successo
+        // 1. Cerchiamo l'utente PRIMA di autenticarlo per vedere se è attualmente bannato
+        // Usiamo un'eccezione generica per non far capire a un hacker se l'email esiste o no
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(); // Non può fallire dato che l'autenticazione è passata
+                .orElseThrow(() -> new BadCredentialsException("Credenziali non valide"));
 
+        // 2. CONTROLLO LOCKOUT: È bloccato?
+        if (user.getLockoutEnd() != null) {
+            if (LocalDateTime.now().isBefore(user.getLockoutEnd())) {
+                // È ancora in punizione
+                long minutesLeft = ChronoUnit.MINUTES.between(LocalDateTime.now(), user.getLockoutEnd());
+                throw new DisabledException("Account temporaneamente bloccato per sicurezza. Riprova tra " + minutesLeft + " minuti.");
+            } else {
+                // Il tempo è scaduto, sblocchiamo l'account in memoria (salveremo sul DB dopo)
+                user.setLockoutEnd(null);
+                user.setFailedLoginAttempts(0);
+            }
+        }
+
+        // 3. TENTATIVO DI AUTENTICAZIONE
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+        } catch (BadCredentialsException ex) {
+            // L'AUTENTICAZIONE È FALLITA! (Password errata)
+            int attempts = user.getFailedLoginAttempts() + 1;
+            user.setFailedLoginAttempts(attempts);
+
+            if (attempts >= MAX_FAILED_ATTEMPTS) {
+                // Scatta il blocco
+                user.setLockoutEnd(LocalDateTime.now().plusMinutes(LOCKOUT_DURATION_MINUTES));
+                userRepository.save(user);
+                throw new BadCredentialsException("Troppi tentativi falliti. Account bloccato per " + LOCKOUT_DURATION_MINUTES + " minuti.");
+            }
+
+            // Salviamo il nuovo contatore e diamo errore
+            userRepository.save(user);
+            throw new BadCredentialsException("Credenziali non valide. Tentativi rimasti: " + (MAX_FAILED_ATTEMPTS - attempts));
+        }
+
+        // 4. L'AUTENTICAZIONE HA AVUTO SUCCESSO!
+        // Se l'utente aveva sbagliato in precedenza ma ora ha indovinato, azzeriamo la sua fedina penale
+        if (user.getFailedLoginAttempts() > 0 || user.getLockoutEnd() != null) {
+            user.setFailedLoginAttempts(0);
+            user.setLockoutEnd(null);
+            userRepository.save(user);
+        }
+
+        // 5. GENERAZIONE TOKEN (Il tuo codice originale)
         String jwtToken = jwtService.generateToken(user);
 
         return new AuthResponseDto(
