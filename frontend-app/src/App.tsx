@@ -5,6 +5,7 @@ import PlayPage from './pages/PlayPage';
 import WalletPage from './pages/WalletPage';
 import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
+import BannedPage from './pages/BannedPage';
 import AdminPage from './pages/AdminPage';
 import { useAuth } from './context/AuthContext';
 
@@ -25,6 +26,8 @@ export default function App() {
             path="/login" 
             element={!user ? <AuthPage /> : <Navigate to="/play" />} 
           />
+
+          <Route path="/banned" element={<BannedPage />} />
 
           {/* Rotte protette: accessibili solo se loggati */}
           <Route 

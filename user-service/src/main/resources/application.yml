@@ -29,6 +29,8 @@ spring:
 
 # Configurazione Sicurezza e JWT
 app:
+  internal: # Api-Key interna per accesso alle rotte /internal
+    secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
   jwt:
     # Segreta usata per firmare i token. In produzione va caricata da Vault o ENV.
     secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"

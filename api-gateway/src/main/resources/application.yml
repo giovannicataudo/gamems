@@ -4,12 +4,22 @@ server:
 spring:
   application:
     name: api-gateway
-
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    virtual-host: gamems_vhost
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASS:guest}
+    
 # Configurazione della Sicurezza
 app:
+  user-service:
+    url: http://${USER_HOST:localhost}:8081
   api-key: "LaTuaApiKeyEsternaSegreta2026!"
   jwt:
     secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+  internal:
+    secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
 
 # Monitoraggio
 management:

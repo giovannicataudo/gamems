@@ -1,9 +1,11 @@
 package it.gamems.api_gateway.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import it.gamems.api_gateway.config.AppConfig;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -11,8 +13,11 @@ import org.springframework.web.servlet.function.HandlerFilterFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import it.gamems.api_gateway.config.AppConfig;
+import it.gamems.api_gateway.service.BlacklistService;
 
 /**
  * ========================================================
@@ -29,9 +34,11 @@ import java.nio.charset.StandardCharsets;
 public class JwtAuthFilter {
 
     private final AppConfig appConfig;
+    private final BlacklistService blacklistService;
 
-    public JwtAuthFilter(AppConfig appConfig) {
+    public JwtAuthFilter(AppConfig appConfig, BlacklistService blacklistService) {
         this.appConfig = appConfig;
+        this.blacklistService = blacklistService;
     }
 
     /**
@@ -65,7 +72,22 @@ public class JwtAuthFilter {
                 // 3. PROPAGAZIONE DELL'IDENTITÀ (TRUSTED M2M)
                 // Estraiamo l'ID utente dal payload del token e lo convertiamo in stringa
                 String userId = claims.get("userId").toString();
-                
+
+                // Conversione del dato per efficacia e coerenza
+                Long userIdLong = Long.valueOf(userId);
+                // Se l'ID è presente nella nostra lista in memoria, blocchiamo 
+                // la richiesta prima che raggiunga i microservizi.
+                if (blacklistService.isBanned(userIdLong)) {
+                    // Restituiamo 403 FORBIDDEN perchè il token è ancora valido
+                    // ma l'utente è bannato
+                    return ServerResponse.status(HttpStatus.FORBIDDEN)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(Map.of(
+                                "code", "USER_BANNED",
+                                "message", "Il tuo account è stato sospeso. Contatta l'assistenza per ulteriori informazioni."
+                            ));
+                }
+
                 // NOTA CRITICA MVC: 
                 // In WebMVC usiamo ServerRequest.from(request) per clonare la richiesta
                 // in modo immutabile e aggiungere l'header "X-User-Id".

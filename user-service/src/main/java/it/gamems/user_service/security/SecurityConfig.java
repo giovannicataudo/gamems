@@ -1,10 +1,12 @@
 package it.gamems.user_service.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,6 +38,10 @@ public class SecurityConfig {
     // Viete iniettata in automatico CustomUserDetailsService
     private final UserDetailsService userDetailsService;
 
+    // Iniettiamo la chiave segreta definita nel file YAML
+    @Value("${app.internal.secret}")
+    private String internalSecret;
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
@@ -59,6 +65,15 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 // Tutte le altre richieste DEVONO avere un token valido
                 // Se l'utente non è nel Security Context scatta il 401
+                // ROTTE INTERNE: Controllo della "parola d'ordine" Machine-to-Machine
+                .requestMatchers("/api/v1/internal/**").access((authentication, context) -> {
+                    // Estraiamo dall'intero http l'header che contiene l'api-key
+                    String requestHeaderSecret = context.getRequest().getHeader("X-Internal-Secret");
+                    // Confrotniamo le api-key
+                    boolean granted = internalSecret.equals(requestHeaderSecret);
+                    // Ritorniamo la decisione ("Approvato" se true, "Negato" se false)
+                    return new AuthorizationDecision(granted);
+                })
                 .anyRequest().authenticated()
             )
             

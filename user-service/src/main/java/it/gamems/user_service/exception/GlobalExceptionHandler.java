@@ -1,6 +1,5 @@
 package it.gamems.user_service.exception;
 
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;

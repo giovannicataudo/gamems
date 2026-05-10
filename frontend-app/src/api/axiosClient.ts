@@ -90,6 +90,21 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // Se il server risponde con 403 (Forbidden)
+    if (error.response && error.response.status === 403) {
+      const data = error.response.data;
+
+      // Se il codice d'errore è quello del ban che abbiamo messo nel Gateway
+      if (data && data.code === 'USER_BANNED') {
+        // 1. Puliamo il token per evitare loop infiniti
+        localStorage.removeItem('jwt_token');
+        
+        // 2. Teletrasportiamo l'utente alla pagina di ban
+        // Usiamo window.location invece di useNavigate perché siamo fuori da un componente React
+        window.location.href = '/banned';
+      }
+    }
+
     // Se l'errore non viene intercettato viene passato oltre
     return Promise.reject(error);
   }

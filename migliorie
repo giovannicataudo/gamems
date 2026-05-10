@@ -22,9 +22,6 @@ Impatto sul Frontend: Nessuno. Soluzione Backend:
 In produzione, passerai a variabili d'ambiente passate 
 tramite ConfigMap/Secrets di Kubernetes o HashiCorp Vault.
 
-il ban funziona ma non è istantaneo
-prova soluzione tramite user->broker<-api
-
 token ogni 24 ore (scegli che fare)
 
 attenzione a show-detaisl:always negli application.yml
@@ -34,3 +31,11 @@ devi chiudere porte e reti nel compose
 
 capire cosa fare della DLQ delle partite non accreditate
 (wallet-service/rabbitmqcunfig e wallet-service/gameresultlistener)
+
+capire quanto mal di testa vuoi prenderti per gestire meglio gli errori
+(esmpio di gamersultlistener in handlegamerult che catcha qualsiasi errore
+ma potrebbe sicuramente intercettare errori non suoi
+chissà quanti altri probemi come questo ci sono)
+
+passa al setaggio dell'ia i servizi singoli uno per volta
+prova anche altri oltre a gemini

@@ -57,6 +57,7 @@ services:
       context: ./user-service
     container_name: user-service
     environment:
+      - RABBIT_HOST=rabbitmq-broker
       - DB_HOST=postgres-db
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     deploy:
@@ -137,7 +138,10 @@ services:
       - user-service
       - wallet-service
       - game-service
+      - rabbitmq-broker
     environment:
+      - RABBIT_HOST=rabbitmq-broker
+      - USER_HOST=user-service
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     deploy:
       resources:
