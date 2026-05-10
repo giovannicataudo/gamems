@@ -93,6 +93,11 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BadCredentialsException("Credenziali non valide"));
 
+        // Se l'uente fa il login con credenziali valide ma è stato bannato
+        if (!user.isEnabled()) {
+            throw new DisabledException("Sei stato bannato. Contatta l'assistenza per maggiori informazioni.");
+        }
+
         // 2. CONTROLLO LOCKOUT: È bloccato?
         if (user.getLockoutEnd() != null) {
             if (LocalDateTime.now().isBefore(user.getLockoutEnd())) {
@@ -120,7 +125,7 @@ public class AuthService {
                 // Scatta il blocco
                 user.setLockoutEnd(LocalDateTime.now().plusMinutes(LOCKOUT_DURATION_MINUTES));
                 userRepository.save(user);
-                throw new BadCredentialsException("Troppi tentativi falliti. Account bloccato per " + LOCKOUT_DURATION_MINUTES + " minuti.");
+                throw new DisabledException("Troppi tentativi falliti. Account bloccato per " + LOCKOUT_DURATION_MINUTES + " minuti.");
             }
 
             // Salviamo il nuovo contatore e diamo errore

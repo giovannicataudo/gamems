@@ -20,6 +20,13 @@ spring:
       ddl-auto: update
     show-sql: false
 
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    virtual-host: gamems_vhost
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASS:guest}
+
 # Configurazione Sicurezza e JWT
 app:
   jwt:

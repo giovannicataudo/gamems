@@ -50,7 +50,7 @@ spring:
     password: ${RABBIT_PASS:guest}
     listener:
       simple:
-      # Riproverà a scrivere l'esito sul db qualche volta
+      # Riproverà a pubblicare l'evento su Rabbit
         retry:
           enabled: true
           initial-interval: 2000ms

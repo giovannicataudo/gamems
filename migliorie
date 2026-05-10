@@ -31,3 +31,6 @@ attenzione a show-detaisl:always negli application.yml
 capisci se le usi su Kubernetes o togliele
 
 devi chiudere porte e reti nel compose
+
+capire cosa fare della DLQ delle partite non accreditate
+(wallet-service/rabbitmqcunfig e wallet-service/gameresultlistener)

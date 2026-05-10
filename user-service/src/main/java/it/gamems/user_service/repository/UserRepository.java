@@ -2,7 +2,9 @@ package it.gamems.user_service.repository;
 
 import it.gamems.user_service.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 
 import java.util.Optional;
 
@@ -31,4 +33,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return true se l'email è già presente nel sistema.
      */
     boolean existsByEmail(String email);
+
+    // Query per trovare gli id degli utenti bannati
+    @Query("SELECT u.id FROM User u WHERE u.enabled = false")
+    List<Long> findBannedUserIds();
 }

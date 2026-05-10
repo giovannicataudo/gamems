@@ -80,13 +80,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<Object> handleDisabledException(DisabledException ex) {
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN) // 403 Forbidden
-                .body(Map.of(
-                    "message", "Sei stato bannato. Contatta l'assistenza clienti per maggiori informazioni.",
-                    "status", HttpStatus.FORBIDDEN.value()
-                ));
+    public ResponseEntity<ErrorResponseDto> handleDisabledException(DisabledException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, "Account Locked", ex.getMessage());
     }
 
     // 4. Fallback: Errore imprevisto del server -> 500 INTERNAL SERVER ERROR

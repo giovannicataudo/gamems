@@ -4,6 +4,7 @@ import it.gamems.user_service.dto.UserProfileDto;
 import it.gamems.user_service.entity.User;
 import it.gamems.user_service.repository.UserRepository;
 import it.gamems.user_service.enums.Role;
+import it.gamems.user_service.event.UserEventPublisher;
 
 import java.util.stream.Collectors;
 import java.util.List;
@@ -21,9 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserEventPublisher eventPublisher;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserEventPublisher eventPublisher) {
         this.userRepository = userRepository;
+        this.eventPublisher=eventPublisher;
     }
 
     /**
@@ -70,6 +73,10 @@ public class UserService {
         
         user.setEnabled(enabled);
         userRepository.save(user);
+
+        // Deleghiamo la notifica istantanea al layer apposito
+        String action = enabled ? "UNBAN" : "BAN";
+        eventPublisher.publishSecurityEvent(id, action);
     }
 
     /**
@@ -82,5 +89,11 @@ public class UserService {
         
         user.setRole(Role.ADMIN);
         userRepository.save(user);
+    }
+
+    // Metodo per estrarre la lista degli utenti bannati
+    @Transactional(readOnly = true)
+    public List<Long> getBannedUserIds() {
+        return userRepository.findBannedUserIds();
     }
 }
