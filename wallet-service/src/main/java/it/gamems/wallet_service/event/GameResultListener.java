@@ -5,6 +5,7 @@ import it.gamems.wallet_service.service.WalletService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 
@@ -48,21 +49,21 @@ public class GameResultListener {
                         event.winAmount(), event.userId(), event.matchId());
             }
             
-        } catch (Exception e) {
-            /*
-             * GESTIONE ERRORI ASINCRONI:
-             * Se il database crasha qui, non possiamo restituire un 500 all'utente 
-             * perché l'utente non sta aspettando (la richiesta HTTP è già chiusa).
-             * Loggiamo l'errore per un eventuale retry manuale o per instradare 
-             * il messaggio in una Dead Letter Queue (DLQ).
-             */
-            log.error("Errore critico durante l'accredito della vincita per l'utente [{}]. Il messaggio verrà spostato nella DLQ. Dettaglio errore: {}", 
-            event.userId(), e.getMessage(), e);
+        } catch (IllegalArgumentException | NullPointerException | DataIntegrityViolationException e) {
+            // ERRORE FATALE STRUTTURALE (Poison Pill)
+            // Es: Manca l'ID utente, dati corrotti. Riprovare 5 volte è inutile.
+            // Qui USIAMO esplicitamente AmqpRejectAndDontRequeueException per bypassare i retry
+            // e mandare subito il messaggio nella DLQ.
+            log.error("Dati corrotti per l'evento [{}]. Spostamento istantaneo in DLQ.", event.matchId(), e);
+            throw new AmqpRejectAndDontRequeueException("Dati non validi, impossibile accreditare", e);
             
-            // Questa eccezione ordina a RabbitMQ di NON rimettere il messaggio nella coda originaria.
-            // Poiché in RabbitMQConfig abbiamo configurato un "x-dead-letter-exchange", 
-            // RabbitMQ intercetterà questo rifiuto e instraderà il messaggio nella DLQ in modo sicuro.
-            throw new AmqpRejectAndDontRequeueException("Impossibile processare il messaggio. Spostamento in DLQ.", e);
+        } catch (Exception e) {
+            // ERRORE TRANSITORIO (Es: DB offline, Lock Ottimistico fallito)
+            // NON lanciamo la RejectException! Rilanciamo l'errore originale.
+            // Spring intercetterà l'errore, aspetterà 2 secondi e riproverà da solo (max 5 volte).
+            // Se fallisce per la quinta volta, Spring lo manderà in DLQ per conto suo.
+            log.warn("Errore temporaneo accreditamento partita [{}]. Tentativo di retry in corso...", event.matchId());
+            throw new RuntimeException("Errore transitorio, lascio agire il retry di Spring", e);
         }
     }
 }
