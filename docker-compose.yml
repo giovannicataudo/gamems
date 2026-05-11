@@ -8,7 +8,7 @@ services:
     image: postgres:15-alpine
     container_name: postgres-db
     ports:
-      - "5432:5432" # Aperta per pgAdmin locale
+      - "5432:5432"
     environment:
       POSTGRES_USER: root_admin
       POSTGRES_PASSWORD: root_password
@@ -24,7 +24,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 384M # Più che sufficiente per test locali
+          memory: 384M
         reservations:
           cpus: '0.1'
           memory: 128M
@@ -33,11 +33,11 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq-broker
     ports:
-      - "15672:15672" # Dashboard visiva
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_DEFAULT_VHOST: gamems_vhost # Isolamento logico
+      RABBITMQ_DEFAULT_VHOST: gamems_vhost
     networks:
       - backend-net
     restart: unless-stopped
@@ -48,6 +48,23 @@ services:
           memory: 256M
         reservations:
           memory: 128M
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
   # ==========================================
   # LIVELLO 2: MICROSERVIZI CORE
@@ -64,7 +81,7 @@ services:
       resources:
         limits:
           cpus: '0.8'
-          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+          memory: 512M
         reservations:
           cpus: '0.1'
           memory: 256M
@@ -73,6 +90,7 @@ services:
       - db-user-net
     depends_on:
       - postgres-db
+      - rabbitmq-broker
 
   wallet-service:
     build: 
@@ -86,7 +104,7 @@ services:
       resources:
         limits:
           cpus: '0.8'
-          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+          memory: 512M
         reservations:
           cpus: '0.1'
           memory: 256M
@@ -110,7 +128,7 @@ services:
       resources:
         limits:
           cpus: '0.8'
-          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+          memory: 512M
         reservations:
           cpus: '0.1'
           memory: 256M
@@ -139,15 +157,17 @@ services:
       - wallet-service
       - game-service
       - rabbitmq-broker
+      - redis-cache
     environment:
       - RABBIT_HOST=rabbitmq-broker
       - USER_HOST=user-service
+      - REDIS_HOST=redis-cache
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     deploy:
       resources:
         limits:
           cpus: '0.8'
-          memory: 512M # 256M per l'Heap Java + 256M per il Metaspace e Alpine Linux
+          memory: 512M
         reservations:
           cpus: '0.1'
           memory: 256M
@@ -160,7 +180,7 @@ services:
       context: ./frontend-app
     container_name: frontend-app
     ports:
-      - "8080:80" # Il tuo PC (8080) punta a Nginx (80)
+      - "8080:80"
     networks:
       - frontend-net
     depends_on:

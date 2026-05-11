@@ -2,6 +2,7 @@ package it.gamems.api_gateway.config;
 
 import it.gamems.api_gateway.security.ApiKeyFilter;
 import it.gamems.api_gateway.security.JwtAuthFilter;
+import it.gamems.api_gateway.security.RateLimitingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RequestPredicates;
@@ -30,12 +31,14 @@ import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFu
 public class GatewayRoutingConfig {
 
     @Bean
-    public RouterFunction<ServerResponse> gatewayRoutes(ApiKeyFilter apiKeyFilter, JwtAuthFilter jwtAuthFilter) {
+    public RouterFunction<ServerResponse> gatewayRoutes(ApiKeyFilter apiKeyFilter, JwtAuthFilter jwtAuthFilter,
+                                                        RateLimitingFilter rateLimitingFilter) {
 
         return route("user-auth-service")
                 .route(RequestPredicates.path("/api/v1/auth/**"), http())
                 .before(uri(URI.create("http://user-service:8081")))
                 .filter(apiKeyFilter.apiKeyAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build()
 
             // --- SEZIONE ADMIN (Ordine Specifico -> Generico) ---
@@ -45,6 +48,7 @@ public class GatewayRoutingConfig {
                 .before(uri(URI.create("http://game-service:8083")))
                 .filter(apiKeyFilter.apiKeyAuth())
                 .filter(jwtAuthFilter.jwtAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build())
 
             .and(route("wallet-admin-service")
@@ -52,6 +56,7 @@ public class GatewayRoutingConfig {
                 .before(uri(URI.create("http://wallet-service:8082")))
                 .filter(apiKeyFilter.apiKeyAuth())
                 .filter(jwtAuthFilter.jwtAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build())
 
             .and(route("user-admin-service")
@@ -59,6 +64,7 @@ public class GatewayRoutingConfig {
                 .before(uri(URI.create("http://user-service:8081")))
                 .filter(apiKeyFilter.apiKeyAuth())
                 .filter(jwtAuthFilter.jwtAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build())
 
             // --- SEZIONE UTENTI REGOLARI ---
@@ -68,6 +74,7 @@ public class GatewayRoutingConfig {
                 .before(uri(URI.create("http://user-service:8081")))
                 .filter(apiKeyFilter.apiKeyAuth())
                 .filter(jwtAuthFilter.jwtAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build())
 
             .and(route("game-service")
@@ -75,6 +82,7 @@ public class GatewayRoutingConfig {
                 .before(uri(URI.create("http://game-service:8083")))
                 .filter(apiKeyFilter.apiKeyAuth())
                 .filter(jwtAuthFilter.jwtAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build())
 
             .and(route("wallet-service")
@@ -82,6 +90,7 @@ public class GatewayRoutingConfig {
                 .before(uri(URI.create("http://wallet-service:8082")))
                 .filter(apiKeyFilter.apiKeyAuth())
                 .filter(jwtAuthFilter.jwtAuth())
+                .filter(rateLimitingFilter.rateLimiter())
                 .build());
     }
 }

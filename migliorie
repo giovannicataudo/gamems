@@ -10,12 +10,6 @@ Soluzione Backend: Dovrai implementare l'Optimistic Locking
 restituendo un HTTP 409 Conflict, che il frontend mostrerà come "Elaborazione in corso, 
 riprova tra un istante".
 
-Rate Limiting sul Gateway: 
-Eccellente idea per prevenire DDoS o spam. 
-Impatto sul Frontend: Il Gateway inizierà a restituire HTTP 429 (Too Many Requests).
-Il nostro axiosClient.ts dovrà essere aggiornato per intercettare il 429 
-e mostrare un messaggio amichevole ("Stai facendo troppe richieste, rallenta").
-
 Gestione Credenziali in chiaro (yml): 
 Classico problema da ambiente di sviluppo. 
 Impatto sul Frontend: Nessuno. Soluzione Backend: 
@@ -39,3 +33,8 @@ chissà quanti altri probemi come questo ci sono)
 
 passa al setaggio dell'ia i servizi singoli uno per volta
 prova anche altri oltre a gemini
+
+cambiare i dockerfile dei servizi in multistage
+(come quello del front)
+
+pensare se sfruttare redis anche per id bannati

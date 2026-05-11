@@ -14,6 +14,7 @@ public class AppConfig {
     private final Jwt jwt = new Jwt();
     private final UserService userService = new UserService();
     private final Internal internal = new Internal();
+    private final RateLimit rateLimit = new RateLimit();
 
 
     public String getApiKey() {
@@ -34,6 +35,10 @@ public class AppConfig {
 
     public Internal getInternal() {
         return internal;
+    }
+
+    public RateLimit getRateLimit(){
+        return rateLimit;
     }
 
     public static class Jwt {
@@ -72,5 +77,27 @@ public class AppConfig {
 
         public String getSecret() { return secret; }
         public void setSecret(String secret) { this.secret = secret; }
+    }
+
+    // --- CLASSI ANNIDATE PER IL RATE LIMIT ---
+    public static class RateLimit {
+        private final Policy anonymous = new Policy();
+        private final Policy authenticated = new Policy();
+
+        public Policy getAnonymous() { return anonymous; }
+        public Policy getAuthenticated() { return authenticated; }
+
+        /**
+         * Struttura condivisa sia per 'anonymous' che per 'authenticated'
+         */
+        public static class Policy {
+            private int requests;
+            private int durationSec; // Spring mappa in automatico "duration-sec"
+
+            public int getRequests() { return requests; }
+            public void setRequests(int requests) { this.requests = requests; }
+            public int getDurationSec() { return durationSec; }
+            public void setDurationSec(int durationSec) { this.durationSec = durationSec; }
+        }
     }
 }

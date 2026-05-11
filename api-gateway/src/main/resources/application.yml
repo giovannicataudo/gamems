@@ -10,7 +10,16 @@ spring:
     virtual-host: gamems_vhost
     username: ${RABBIT_USER:guest}
     password: ${RABBIT_PASS:guest}
-    
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      # Timeout di connessione (se non trova Redis entro 2 sec, va in errore)
+      timeout: 2000
+      lettuce:
+        pool:
+          max-active: 10 # Connessioni massime contemporanee al db Redis
+          max-idle: 5
 # Configurazione della Sicurezza
 app:
   user-service:
@@ -20,7 +29,14 @@ app:
     secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
   internal:
     secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
-
+  rate-limit:
+    anonymous:
+      requests: 20    # Tentativi massimi (IP)
+      duration-sec: 60 # Finestra temporale (1 minuto)
+    authenticated:
+      requests: 50    # Richieste massime (JWT)
+      duration-sec: 60
+      
 # Monitoraggio
 management:
   endpoints:
