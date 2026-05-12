@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -130,6 +131,17 @@ public class GlobalExceptionHandler {
                 "Metodo HTTP non supportato per questa rotta. Metodi ammessi: " + supportedMethods
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    // Se c'è una concorrenza il servizio aspetta e retrya 3 volte ma superate queste
+    // tre volte viene sollevato questo errore.
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<String> handleOptimisticLocking(ObjectOptimisticLockingFailureException ex) {
+        log.warn("Conflitto di concorrenza rilevato sul Wallet. Transazione respinta.");
+        // Il codice 409 Conflict istruisce il frontend che la richiesta era valida, 
+        // ma lo stato del server è cambiato nel frattempo.
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("Elaborazione in corso. Riprova tra un istante.");
     }
 
     /**
