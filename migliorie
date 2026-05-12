@@ -1,32 +1,18 @@
-A. K8s e Concorrenze di Scrittura (Optimistic Locking)
-La tua analisi: Segnali il rischio di Race Condition e suggerisci @Version e un HTTP 409.
-
-Il verdetto: Corretto, ma sei già a metà dell'opera. Nel Wallet.java hai già inserito @Version e nel WalletService hai persino configurato un @Retryable(maxAttempts=3) per riprovare in automatico. Questa è una best practice assoluta.
-
-Cosa manca: Se tutti e 3 i tentativi falliscono, Spring lancia la ObjectOptimisticLockingFailureException. Attualmente il tuo GlobalExceptionHandler non la cattura, finendo nel blocco generico 500 Internal Server Error. Devi aggiungere un handler specifico per questa eccezione e restituire il 409 Conflict, come hai giustamente intuito, affinché il frontend sappia come reagire.
-
 B. Gestione Credenziali in chiaro (yml)
 La tua analisi: Passare da variabili in chiaro nel compose a ConfigMap/Secrets.
-
 Il verdetto: Obbligatorio. K8s è un ambiente distribuito. Le credenziali del DB, la secret JWT e le API Key interne non possono risiedere nel codice o nel deployment. Vanno isolate in oggetti Secret di K8s e iniettate come variabili d'ambiente nei Pod.
 
 C. Dockerfile Multistage
 La tua analisi: Cambiare i Dockerfile backend in multistage.
-
 Il verdetto: Urgente. Attualmente i tuoi Dockerfile backend fanno COPY target/*.jar app.jar. Questo significa che il container dipende dal fatto che tu abbia prima eseguito mvn package sul tuo computer fisico. Rompe totalmente la portabilità. Il Dockerfile deve contenere uno STAGE 1 (Maven) per compilare e uno STAGE 2 (JRE) per eseguire, esattamente come hai fatto per React.
-
-D. Redis per gli ID Bannati
-La tua analisi: Sfruttare Redis invece della RAM.
-
-Il verdetto: Altamente consigliato in Kubernetes. Attualmente il tuo BlacklistService nel Gateway salva i ban in una ConcurrentHashMap in memoria (aggiornata all'avvio o tramite fanout RabbitMQ). Se in K8s scali il Gateway a 3 repliche, la sincronizzazione della cache in RAM diventa un incubo. Visto che hai già Redis collegato al Gateway per il Bucket4j, usarlo anche come "Single Source of Truth" per la blacklist renderà il Gateway al 100% stateless e infinitamente scalabile.
 
 E. Actuator show-details: always
 Il verdetto: Rischio di Sicurezza. In K8s, Kubernetes stesso chiama l'endpoint /health per le Liveness e Readiness Probes. Esporre i dettagli (come indirizzi IP del database, spazio su disco) è una vulnerabilità informativa. In produzione deve essere disattivato o protetto da credenziali.
 
 F. Gestione "Catch-All" degli Errori
 La tua analisi: Evitare i catch(Exception e) indiscriminati (es. GameResultListener).
-
 Il verdetto: Critico per la Manutenibilità. Nascondere le eccezioni specifiche dietro un Exception genitore sabota la Dead Letter Queue (DLQ) o i meccanismi di Retry. Rischia di spostare in DLQ messaggi dovuti a cali di rete temporanei, anziché scartare solo i payload malformati (Poison Pills). Questo richiede una revisione dei blocchi try-catch nei listener asincroni.
+
 
      Revisione del Codice: Vulnerabilità Architetturali Rilevate
 Al di là delle tue note, esaminando il codice riga per riga, ho individuato i seguenti punti di attenzione prima del deploy in produzione:
