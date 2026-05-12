@@ -7,8 +7,6 @@ services:
   postgres-db:
     image: postgres:15-alpine
     container_name: postgres-db
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: root_admin
       POSTGRES_PASSWORD: root_password
@@ -32,8 +30,6 @@ services:
   rabbitmq-broker:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq-broker
-    ports:
-      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -52,8 +48,6 @@ services:
   redis-cache:
     image: redis:7-alpine
     container_name: redis-cache
-    ports:
-      - "6379:6379"
     networks:
       - backend-net
     restart: unless-stopped
@@ -205,13 +199,13 @@ networks:
     driver: bridge
   db-user-net:
     driver: bridge
-    #internal: true
+    internal: true
   db-wallet-net:
     driver: bridge
-    #internal: true
+    internal: true
   db-game-net:
     driver: bridge
-    #internal: true
+    internal: true
 
 volumes:
   postgres-data:
