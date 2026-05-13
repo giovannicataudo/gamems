@@ -1,5 +1,6 @@
 package it.gamems.api_gateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -23,14 +24,18 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    private final AppConfig appConfig;
+
+    public CorsConfig(AppConfig appConfig) {
+        this.appConfig = appConfig;
+    }
+
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         
         // 1. ORIGINI CONSENTITE (Chi può chiamarci?)
-        config.setAllowedOrigins(List.of(
-            "http://localhost:8080"
-        ));
+       config.setAllowedOrigins(appConfig.getCors().getAllowedOrigins());
         
         // 2. METODI CONSENTITI (Cosa possono fare?)
         // Abilitiamo i verbi HTTP necessari per le nostre API (CRUD e OPTIONS per il pre-flight del browser).

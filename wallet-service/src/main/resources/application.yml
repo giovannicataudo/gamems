@@ -72,7 +72,7 @@ management:
     web:
       exposure:
         # Esponiamo solo l'health check per Docker. Nascondiamo il resto per sicurezza.
-        include: health
+        include: health, metrics
   endpoint:
     health:
-      show-details: always
+      show-details: ${HEALTH_SHOW_DETAILS:never}

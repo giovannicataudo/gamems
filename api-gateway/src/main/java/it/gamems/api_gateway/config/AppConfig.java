@@ -1,5 +1,7 @@
 package it.gamems.api_gateway.config;
 
+import java.util.List;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,6 +17,7 @@ public class AppConfig {
     private final UserService userService = new UserService();
     private final Internal internal = new Internal();
     private final RateLimit rateLimit = new RateLimit();
+    private final Cors cors = new Cors();
 
 
     public String getApiKey() {
@@ -39,6 +42,10 @@ public class AppConfig {
 
     public RateLimit getRateLimit(){
         return rateLimit;
+    }
+
+    public Cors getCors() {
+        return cors;
     }
 
     public static class Jwt {
@@ -98,6 +105,19 @@ public class AppConfig {
             public void setRequests(int requests) { this.requests = requests; }
             public int getDurationSec() { return durationSec; }
             public void setDurationSec(int durationSec) { this.durationSec = durationSec; }
+        }
+    }
+
+    public static class Cors {
+        // Spring mappa automaticamente una stringa separata da virgole in una List
+        private List<String> allowedOrigins;
+
+        public List<String> getAllowedOrigins() {
+            return allowedOrigins;
+        }
+
+        public void setAllowedOrigins(List<String> allowedOrigins) {
+            this.allowedOrigins = allowedOrigins;
         }
     }
 }

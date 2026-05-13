@@ -1,6 +1,5 @@
 package it.gamems.wallet_service.controller;
 
-import it.gamems.wallet_service.dto.AmountRequestDto;
 import it.gamems.wallet_service.dto.BetRequestDto;
 import it.gamems.wallet_service.service.WalletService;
 import jakarta.validation.Valid;

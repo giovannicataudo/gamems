@@ -22,6 +22,9 @@ spring:
           max-idle: 5
 # Configurazione della Sicurezza
 app:
+  cors:
+    # Questa variabile verrà sovrascritta da K8s tramite ConfigMap
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:8080}
   user-service:
     url: http://${USER_HOST:localhost}:8081
   api-key: "LaTuaApiKeyEsternaSegreta2026!"
@@ -42,4 +45,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info, metrics
+  endpoint:
+    health:
+      # Mostra i dettagli (DB status, Disk) solo se configurato esplicitamente
+      show-details: ${HEALTH_SHOW_DETAILS:never}

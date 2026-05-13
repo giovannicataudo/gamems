@@ -51,4 +51,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, metrics
+  endpoint:
+    health:
+      show-details: ${HEALTH_SHOW_DETAILS:never}

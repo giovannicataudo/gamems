@@ -1,24 +1,5 @@
-B. Gestione Credenziali in chiaro (yml)
-La tua analisi: Passare da variabili in chiaro nel compose a ConfigMap/Secrets.
-Il verdetto: Obbligatorio. K8s è un ambiente distribuito. Le credenziali del DB, la secret JWT e le API Key interne non possono risiedere nel codice o nel deployment. Vanno isolate in oggetti Secret di K8s e iniettate come variabili d'ambiente nei Pod.
+scrivere i file YAML che descrivono l'intero ecosistema:
 
-C. Dockerfile Multistage
-La tua analisi: Cambiare i Dockerfile backend in multistage.
-Il verdetto: Urgente. Attualmente i tuoi Dockerfile backend fanno COPY target/*.jar app.jar. Questo significa che il container dipende dal fatto che tu abbia prima eseguito mvn package sul tuo computer fisico. Rompe totalmente la portabilità. Il Dockerfile deve contenere uno STAGE 1 (Maven) per compilare e uno STAGE 2 (JRE) per eseguire, esattamente come hai fatto per React.
-
-E. Actuator show-details: always
-Il verdetto: Rischio di Sicurezza. In K8s, Kubernetes stesso chiama l'endpoint /health per le Liveness e Readiness Probes. Esporre i dettagli (come indirizzi IP del database, spazio su disco) è una vulnerabilità informativa. In produzione deve essere disattivato o protetto da credenziali.
-
-F. Gestione "Catch-All" degli Errori
-La tua analisi: Evitare i catch(Exception e) indiscriminati (es. GameResultListener).
-Il verdetto: Critico per la Manutenibilità. Nascondere le eccezioni specifiche dietro un Exception genitore sabota la Dead Letter Queue (DLQ) o i meccanismi di Retry. Rischia di spostare in DLQ messaggi dovuti a cali di rete temporanei, anziché scartare solo i payload malformati (Poison Pills). Questo richiede una revisione dei blocchi try-catch nei listener asincroni.
-
-
-     Revisione del Codice: Vulnerabilità Architetturali Rilevate
-Al di là delle tue note, esaminando il codice riga per riga, ho individuato i seguenti punti di attenzione prima del deploy in produzione:
-
-Sincronia pericolosa nel Gioco (GameService.java):
-Nel metodo play, fai una chiamata REST sincrona al WalletClient per scalare i fondi. Se il Wallet è lento, il thread del Game Service si blocca. Sebbene i Virtual Threads mitighino il problema della memoria, in K8s un blocco di rete potrebbe causare un timeout dell'Ingress prima che il lancio della moneta avvenga. A tendere, l'ideale sarebbe il Pattern Saga: il GameService emette l'evento "Giocata Richiesta", il Wallet scala e risponde "Fondi Scalati", e solo allora il Game elabora il lancio.
-
-Dissonanza sul CORS:
-Hai impostato il CorsConfig nell'API Gateway per accettare http://localhost:8080. Quando migrerai su Kubernetes, il frontend verrà servito tramite un Ingress Controller con un vero nome a dominio (es. game.local o in produzione www.gamems.com). Questa origine fissa bloccherà tutto il traffico. Dovrai esternalizzare le origini consentite nelle variabili d'ambiente.
+Secret: Per le password e la JWT Secret.
+ConfigMap: Per le URL dei servizi e le origini CORS.
+Deployment & Service: Per far girare i pod.
