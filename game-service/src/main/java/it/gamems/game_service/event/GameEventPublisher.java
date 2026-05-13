@@ -1,6 +1,9 @@
 package it.gamems.game_service.event;
 
 import it.gamems.game_service.config.RabbitMQConfig;
+
+import java.math.BigDecimal;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -52,6 +55,38 @@ public class GameEventPublisher {
             // salvando il messaggio su un database per riprovare in seguito.
             log.error("ATTENZIONE: Fallimento critico nella pubblicazione dell'evento per l'utente [{}]: {}", 
                     eventDto.userId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ========================================================
+     * TRANSAZIONE COMPENSATIVA
+     * ========================================================
+     * Invia l'evento di emergenza al broker per rimborsare un addebito
+     * "orfano" a causa di un timeout di rete o un crash.
+     */
+    public void publishRefundRequest(Long matchId, String userId, BigDecimal amount) {
+        log.warn("🚨 Pubblicazione evento RabbitMQ di COMPENSAZIONE: Richiesta rimborso per partita #{}, Utente [{}], Importo: {}€", 
+                matchId, userId, amount);
+
+        try {
+            RefundRequestEventDto refundDto = new RefundRequestEventDto(matchId, userId, amount);
+            
+            // Usiamo lo STESSO Exchange, ma una DIVERSA Routing Key
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.EXCHANGE_NAME, 
+                    RabbitMQConfig.REFUND_ROUTING_KEY, 
+                    refundDto
+            );
+            
+            log.debug("Evento di compensazione (Partita #{}) inviato all'exchange '{}' con routing key '{}'", 
+                    matchId, RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.REFUND_ROUTING_KEY);
+                    
+        } catch (Exception e) {
+            // Un fallimento qui è critico. In un sistema enterprise reale, questo andrebbe in una Dead Letter 
+            // Queue o in una tabella 'outbox' sul database per retry infiniti.
+            log.error("🔥 DISASTRO TRANSAZIONALE: Impossibile inviare la richiesta di rimborso per la partita #{} dell'utente [{}]. Errore broker: {}", 
+                    matchId, userId, e.getMessage(), e);
         }
     }
 }

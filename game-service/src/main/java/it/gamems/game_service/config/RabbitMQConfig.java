@@ -18,6 +18,7 @@ public class RabbitMQConfig {
     // Devono combaciare ESATTAMENTE con quelli definiti nel wallet-service
     public static final String EXCHANGE_NAME = "game.exchange";
     public static final String ROUTING_KEY = "game.result.wallet";
+    public static final String REFUND_ROUTING_KEY = "game.refund.routing";
 
     /**
      * Dichiara l'Exchange. Se non esiste sul broker, Spring lo creerà all'avvio.

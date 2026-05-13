@@ -5,9 +5,11 @@ import it.gamems.wallet_service.dto.WalletAdjustmentRequestDto;
 import it.gamems.wallet_service.dto.WalletResponseDto;
 import it.gamems.wallet_service.entity.ProcessedEvent;
 import it.gamems.wallet_service.entity.Wallet;
+import it.gamems.wallet_service.entity.WalletTransaction;
 import it.gamems.wallet_service.exception.WalletOperationException;
 import it.gamems.wallet_service.repository.ProcessedEventRepository;
 import it.gamems.wallet_service.repository.WalletRepository;
+import it.gamems.wallet_service.repository.WalletTransactionRepository;
 
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.retry.annotation.Retryable;
 
+import java.util.Optional;
 import java.math.BigDecimal;
 
 /**
@@ -39,13 +42,16 @@ public class WalletService {
 
     private final WalletRepository walletRepository;
     private final ProcessedEventRepository processedEventRepository;
+    private final WalletTransactionRepository transactionRepository;
     private final PaymentGatewayClient paymentClient;
 
     private static final Logger log = LoggerFactory.getLogger(WalletService.class);
 
     public WalletService(WalletRepository walletRepository, PaymentGatewayClient paymentClient,
-        ProcessedEventRepository processedEventRepository) {
+        ProcessedEventRepository processedEventRepository,
+        WalletTransactionRepository transactionRepository) {
         this.walletRepository = walletRepository;
+        this.transactionRepository = transactionRepository;
         this.paymentClient = paymentClient;
         this.processedEventRepository = processedEventRepository;
     }
@@ -118,7 +124,15 @@ public class WalletService {
             maxAttempts = 3, 
             backoff = @Backoff(delay = 100) // Attesa di 100 millisecondi tra un tentativo e l'altro
     )
-    public void processGameBet(String userId, BigDecimal betAmount) {
+    public void processGameBet(String userId, BigDecimal betAmount, Long matchId) {
+
+        // 1. VERIFICA IDEMPOTENZA (Scudo anti-duplicati REST)
+        // Se troviamo già una transazione di tipo DEBIT per questo matchId, ignoriamo.
+        if (transactionRepository.findByMatchId(matchId).isPresent()) {
+            log.warn("IDEMPOTENZA: Addebito per partita #{} già eseguito. Salto l'operazione.", matchId);
+            return;
+        }
+
         Wallet wallet = getOrCreateWallet(userId);
         
         BigDecimal totalAvailable = wallet.getRealBalance().add(wallet.getWithdrawableBalance());
@@ -144,6 +158,54 @@ public class WalletService {
         }
 
         walletRepository.save(wallet);
+
+        // 2. SCRITTURA LIBRO MASTRO (FONDAMENTALE per la Saga)
+        // Registriamo il debito in modo che il sistema di rimborso possa rintracciarlo.
+        transactionRepository.save(new WalletTransaction(userId, matchId, betAmount, "DEBIT"));
+
+        log.info("Addebito confermato per partita #{}: {}€ scalati all'utente [{}].", matchId, betAmount, userId);
+    }
+
+    /**
+     * NUOVO METODO: Compensazione Saga (Asincrona RabbitMQ).
+     * Chiamato quando il GameService segnala un fallimento dopo l'invio della bet.
+     */
+    @Transactional
+    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3)
+    public void processRefund(Long matchId, String userId, BigDecimal amount) {
+        log.info("Ricevuta richiesta di compensazione per partita #{}...", matchId);
+
+        // 1. VERIFICA REALE NECESSITÀ
+        // Controlliamo se avevamo effettivamente scalato i soldi.
+        Optional<WalletTransaction> debitTx = transactionRepository.findByMatchId(matchId);
+
+        if (debitTx.isEmpty()) {
+            // Se non c'è il debito, non dobbiamo rimborsare nulla. 
+            // Significa che la chiamata REST era fallita prima di toccare il saldo.
+            log.info("Compensazione ignorata: nessun addebito trovato per la partita #{}.", matchId);
+            return;
+        }
+
+        // 2. EVITIAMO DOPPI RIMBORSI
+        if ("REFUNDED".equals(debitTx.get().getTransactionType())) {
+            log.warn("La partita #{} è già stata rimborsata. Operazione ignorata.", matchId);
+            return;
+        }
+
+        // 3. ESECUZIONE RIMBORSO
+        Wallet wallet = getOrCreateWallet(userId);
+        // Restituiamo i soldi nel saldo REALE (per semplicità e correttezza fiscale)
+        wallet.setRealBalance(wallet.getRealBalance().add(amount));
+        walletRepository.save(wallet);
+
+        // 4. AGGIORNAMENTO STATO TRANSAZIONE (NON CANCELLARE!)
+        // Modifichiamo il tipo di transazione per mantenere lo storico e bloccare futuri retry della REST
+        WalletTransaction tx = debitTx.get();
+        // Aggiungi il metodo setTransactionType nella tua entity WalletTransaction se non c'è
+        tx.setTransactionType("REFUNDED"); 
+        transactionRepository.save(tx);
+
+        log.info("✅ COMPENSAZIONE COMPLETATA: Rimborsati {}€ per partita #{} all'utente [{}].", amount, matchId, userId);
     }
 
     /**

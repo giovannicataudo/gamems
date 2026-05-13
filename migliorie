@@ -20,8 +20,5 @@ Al di là delle tue note, esaminando il codice riga per riga, ho individuato i s
 Sincronia pericolosa nel Gioco (GameService.java):
 Nel metodo play, fai una chiamata REST sincrona al WalletClient per scalare i fondi. Se il Wallet è lento, il thread del Game Service si blocca. Sebbene i Virtual Threads mitighino il problema della memoria, in K8s un blocco di rete potrebbe causare un timeout dell'Ingress prima che il lancio della moneta avvenga. A tendere, l'ideale sarebbe il Pattern Saga: il GameService emette l'evento "Giocata Richiesta", il Wallet scala e risponde "Fondi Scalati", e solo allora il Game elabora il lancio.
 
-Token JWT - Falsi Positivi sulla Scadenza:
-Nel Gateway (JwtAuthFilter), quando un token scade o è manomesso, catturi l'Exception e restituisci brutalmente 401. Se il frontend cerca di leggere lo status per capire perché ha fallito (es. "Scaduto" vs "Manomesso"), non ha le informazioni. Sarebbe utile loggare e differenziare i codici di errore (es. un header specifico) per permettere al client React di fare un redirect pulito alla pagina di login se il token è semplicemente scaduto.
-
 Dissonanza sul CORS:
 Hai impostato il CorsConfig nell'API Gateway per accettare http://localhost:8080. Quando migrerai su Kubernetes, il frontend verrà servito tramite un Ingress Controller con un vero nome a dominio (es. game.local o in produzione www.gamems.com). Questa origine fissa bloccherà tutto il traffico. Dovrai esternalizzare le origini consentite nelle variabili d'ambiente.

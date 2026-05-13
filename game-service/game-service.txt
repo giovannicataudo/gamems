@@ -461,6 +461,7 @@ public class RabbitMQConfig {
     // Devono combaciare ESATTAMENTE con quelli definiti nel wallet-service
     public static final String EXCHANGE_NAME = "game.exchange";
     public static final String ROUTING_KEY = "game.result.wallet";
+    public static final String REFUND_ROUTING_KEY = "game.refund.routing";
 
     /**
      * Dichiara l'Exchange. Se non esiste sul broker, Spring lo creerà all'avvio.
@@ -704,7 +705,7 @@ public class GameService {
 
         try {
             // Chiamata sincrona al Wallet per scalare i fondi.
-            walletClient.debitWallet(userId, request.betAmount());
+            walletClient.debitWallet(userId, request.betAmount(), game.getId());
             
         } catch (GameOperationException e) {
             // Gestione: Il Wallet ha risposto, ma ha rifiutato l'operazione (es. Saldo insufficiente)
@@ -713,19 +714,27 @@ public class GameService {
             persistenceService.updateGameStatus(game.getId(), GameStatus.FAILED);
             throw e; // Rilanciamo: Il GlobalExceptionHandler restituirà un 400 Bad Request
             
-        } catch (ExternalServiceException e) {
-            // Gestione: Il Wallet è offline, in timeout o ha restituito un errore 500
-            log.error("Disconnessione dal Wallet per l'utente [{}]. Marco la partita [{}] come FAILED.", 
-                    userId, game.getId());
-            persistenceService.updateGameStatus(game.getId(), GameStatus.FAILED);
-            throw e; // Rilanciamo: Il GlobalExceptionHandler restituirà un 503 Service Unavailable
-            
         } catch (Exception e) {
-            // Fallback: Qualcosa di totalmente imprevisto è esploso nel nostro stesso GameService
-            log.error("Errore di sistema critico durante l'elaborazione della partita [{}]. Marco come FAILED.", 
-                    game.getId(), e);
+            // CASO B: TIMEOUT O ERRORE DI SISTEMA
+            // 'Exception' fa da rete a strascico catturando sia ExternalServiceException 
+            // che qualsiasi altro errore imprevisto a runtime.
+            log.error("Disconnessione o Errore Critico per l'utente [{}]. Marco la partita [{}] come FAILED ed EMETTO EVENTO DI RIMBORSO.", 
+                    userId, game.getId(), e);
+            
             persistenceService.updateGameStatus(game.getId(), GameStatus.FAILED);
-            throw e; // Rilanciamo: Il GlobalExceptionHandler restituirà un 500 Internal Server Error
+            
+            // FONDAMENTALE: Diciamo subito al Wallet "Se ti sono arrivati i soldi per questa giocata, restituiscili!"
+            eventPublisher.publishRefundRequest(game.getId(), userId, request.betAmount());
+            
+            // Rilanciamo l'eccezione originale se è una di quelle previste,
+            // altrimenti la incapsuliamo in una RuntimeException genitore.
+            if (e instanceof ExternalServiceException) {
+                throw (ExternalServiceException) e;
+            } else if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            } else {
+                throw new RuntimeException("Errore di sistema critico.", e);
+            }
         }
 
         // Se arriviamo qui, i soldi sono stati scalati con successo.
@@ -915,6 +924,8 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             @Param("threshold") java.time.LocalDateTime threshold
     );
 
+    // Recupera la lista fisica delle partite orfane
+    List<Game> findByStatusAndCreatedAtBefore(GameStatus status, java.time.LocalDateTime threshold);
 }
 
 ==================================================
@@ -1234,6 +1245,21 @@ public class GameConfig {
 }
 
 ==================================================
+FILE: ./src/main/java/it/gamems/game_service/client/WalletBetDto.java
+==================================================
+package it.gamems.game_service.client;
+
+import java.math.BigDecimal;
+
+/**
+ * Payload inviato al Wallet Service per richiedere l'addebito di una giocata.
+ */
+public record WalletBetDto(
+        BigDecimal amount,
+        Long matchId
+) {}
+
+==================================================
 FILE: ./src/main/java/it/gamems/game_service/client/WalletClient.java
 ==================================================
 package it.gamems.game_service.client;
@@ -1291,10 +1317,11 @@ public class WalletClient {
      * Chiama l'endpoint del Wallet per scalare i soldi della puntata.
      * @param userId L'ID dell'utente che sta giocando.
      * @param amount L'importo da scalare.
+     * @param matchId L'ID della partita (Game)
      * Iniezione api-key interna
      * @throws RuntimeException se il saldo è insufficiente o il servizio è offline.
      */
-    public void debitWallet(String userId, BigDecimal amount) {
+    public void debitWallet(String userId, BigDecimal amount, Long matchId) {
         log.info("Chiamata sincrona al Wallet per utente [{}]: debito di {}€", userId, amount);
 
         try {
@@ -1305,7 +1332,7 @@ public class WalletClient {
                     // Inezione Api-Key interna
                     .header("X-Internal-Secret", appConfig.getInternal().getSecret())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new WalletAmountDto(amount))
+                    .body(new WalletBetDto(amount, matchId))
                     .retrieve()
                     // Se il Wallet risponde con 4xx o 5xx, viene lanciata un'eccezione
                     .onStatus(status -> status.isError(), (request, response) -> {
@@ -1325,18 +1352,6 @@ public class WalletClient {
         }
     }
 }
-
-==================================================
-FILE: ./src/main/java/it/gamems/game_service/client/WalletAmountDto.java
-==================================================
-package it.gamems.game_service.client;
-
-import java.math.BigDecimal;
-
-/**
- * DTO speculare ad AmountRequestDto del Wallet Service per la comunicazione via REST.
- */
-public record WalletAmountDto(BigDecimal amount) {}
 
 ==================================================
 FILE: ./src/main/java/it/gamems/game_service/dto/MessageResponseDto.java
@@ -1475,7 +1490,9 @@ FILE: ./src/main/java/it/gamems/game_service/worker/GamePendingCleanupWorker.jav
 ==================================================
 package it.gamems.game_service.worker;
 
+import it.gamems.game_service.entity.Game;
 import it.gamems.game_service.enums.GameStatus;
+import it.gamems.game_service.event.GameEventPublisher;
 import it.gamems.game_service.repository.GameRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1485,6 +1502,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * ========================================================
@@ -1502,9 +1520,12 @@ public class GamePendingCleanupWorker {
     private static final Logger log = LoggerFactory.getLogger(GamePendingCleanupWorker.class);
     
     private final GameRepository gameRepository;
+    private final GameEventPublisher eventPublisher;
 
-    public GamePendingCleanupWorker(GameRepository gameRepository) {
+    public GamePendingCleanupWorker(GameRepository gameRepository,
+                                    GameEventPublisher eventPublisher) {
         this.gameRepository = gameRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -1516,20 +1537,46 @@ public class GamePendingCleanupWorker {
     public void cleanupStalePendingGames() {
         // Calcoliamo la soglia di tolleranza: 5 minuti fa esatti
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
+        // 1. Recuperiamo materialmente le partite bloccate
+        List<Game> staleGames = gameRepository.findByStatusAndCreatedAtBefore(GameStatus.PENDING, threshold);
 
-        // Eseguiamo l'aggiornamento massivo direttamente sul database
-        int updatedRows = gameRepository.updateStaleGames(GameStatus.PENDING, GameStatus.FAILED, threshold);
-
-        // Log per tenere traccia delle eventuali modifiche
-        if (updatedRows > 0) {
-            log.warn("SELF-HEALING TRIGGERED: Trovate e chiuse {} partite rimaste bloccate in stato PENDING da prima del {}.", 
-                    updatedRows, threshold);
-        } else {
-            // Log a livello trace per non inquinare la console, utile solo in debug
+        if (staleGames.isEmpty()) {
             log.trace("Self-healing check completato: nessuna partita orfana trovata.");
+            return;
+        }
+
+        // 2. Le iteriamo una per una per garantire la Saga
+        for (Game game : staleGames) {
+            game.setStatus(GameStatus.FAILED);
+            gameRepository.save(game);
+            
+            log.warn("SELF-HEALING: Partita orfana #{} passata in FAILED. Emetto evento di compensazione.", game.getId());
+            
+            // 3. FONDAMENTALE: Attiviamo la compensazione per recuperare i soldi dal Wallet
+            eventPublisher.publishRefundRequest(game.getId(), game.getUserId(), game.getBetAmount());
         }
     }
 }
+
+==================================================
+FILE: ./src/main/java/it/gamems/game_service/event/RefundRequestEventDto.java
+==================================================
+package it.gamems.game_service.event;
+
+import java.math.BigDecimal;
+
+/**
+ * ========================================================
+ * EVENT DTO: RefundRequestEvent (Compensazione)
+ * ========================================================
+ * Payload inviato asincronamente al Wallet Service quando una 
+ * partita fallisce per cause di rete dopo il potenziale addebito.
+ */
+public record RefundRequestEventDto(
+        Long matchId,
+        String userId,
+        BigDecimal amount
+) {}
 
 ==================================================
 FILE: ./src/main/java/it/gamems/game_service/event/GameResultEventDto.java
@@ -1560,6 +1607,9 @@ FILE: ./src/main/java/it/gamems/game_service/event/GameEventPublisher.java
 package it.gamems.game_service.event;
 
 import it.gamems.game_service.config.RabbitMQConfig;
+
+import java.math.BigDecimal;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -1611,6 +1661,38 @@ public class GameEventPublisher {
             // salvando il messaggio su un database per riprovare in seguito.
             log.error("ATTENZIONE: Fallimento critico nella pubblicazione dell'evento per l'utente [{}]: {}", 
                     eventDto.userId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ========================================================
+     * TRANSAZIONE COMPENSATIVA
+     * ========================================================
+     * Invia l'evento di emergenza al broker per rimborsare un addebito
+     * "orfano" a causa di un timeout di rete o un crash.
+     */
+    public void publishRefundRequest(Long matchId, String userId, BigDecimal amount) {
+        log.warn("🚨 Pubblicazione evento RabbitMQ di COMPENSAZIONE: Richiesta rimborso per partita #{}, Utente [{}], Importo: {}€", 
+                matchId, userId, amount);
+
+        try {
+            RefundRequestEventDto refundDto = new RefundRequestEventDto(matchId, userId, amount);
+            
+            // Usiamo lo STESSO Exchange, ma una DIVERSA Routing Key
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.EXCHANGE_NAME, 
+                    RabbitMQConfig.REFUND_ROUTING_KEY, 
+                    refundDto
+            );
+            
+            log.debug("Evento di compensazione (Partita #{}) inviato all'exchange '{}' con routing key '{}'", 
+                    matchId, RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.REFUND_ROUTING_KEY);
+                    
+        } catch (Exception e) {
+            // Un fallimento qui è critico. In un sistema enterprise reale, questo andrebbe in una Dead Letter 
+            // Queue o in una tabella 'outbox' sul database per retry infiniti.
+            log.error("🔥 DISASTRO TRANSAZIONALE: Impossibile inviare la richiesta di rimborso per la partita #{} dell'utente [{}]. Errore broker: {}", 
+                    matchId, userId, e.getMessage(), e);
         }
     }
 }

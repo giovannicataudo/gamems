@@ -61,4 +61,6 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             @Param("threshold") java.time.LocalDateTime threshold
     );
 
+    // Recupera la lista fisica delle partite orfane
+    List<Game> findByStatusAndCreatedAtBefore(GameStatus status, java.time.LocalDateTime threshold);
 }

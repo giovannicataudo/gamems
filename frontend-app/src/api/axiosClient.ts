@@ -82,8 +82,8 @@ apiClient.interceptors.response.use(
         // 1. Pulisci il LocalStorage dai dati sensibili
         localStorage.removeItem('jwt_token');
       
-        // Se nel tuo AuthContext salvi anche l'utente in locale, rimuovilo (sostituisci la chiave se diversa)
-        localStorage.removeItem('user'); 
+        // Se nel tuo AuthContext salvi anche l'utente in locale, rimuovilo
+        localStorage.removeItem('gamems_user'); 
       
         // 2. Forza il redirect alla pagina di login
         window.location.href = '/login?expired=true';

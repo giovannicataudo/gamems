@@ -1,6 +1,7 @@
 package it.gamems.wallet_service.controller;
 
 import it.gamems.wallet_service.dto.AmountRequestDto;
+import it.gamems.wallet_service.dto.BetRequestDto;
 import it.gamems.wallet_service.service.WalletService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -39,12 +40,12 @@ public class InternalWalletController {
     @PostMapping("/bet")
     public ResponseEntity<String> processBet(
             @RequestHeader("X-User-Id") String userId,
-            @Valid @RequestBody AmountRequestDto request) {
+            @Valid @RequestBody BetRequestDto request) {
         
-        log.info("Ricevuta richiesta interna di bet per utente [{}]: {}€", userId, request.amount());
+        log.info("Ricevuta richiesta interna di bet per utente [{}]: {}€ per partita #{}", userId, request.amount(), request.matchId());
         
         // Esecuzione della logica di business (Playthrough 1x e verifica saldo)
-        walletService.processGameBet(userId, request.amount());
+        walletService.processGameBet(userId, request.amount(), request.matchId());
         
         return ResponseEntity.ok("Puntata di " + request.amount() + "€ accettata e scalata con successo.");
     }

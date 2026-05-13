@@ -28,6 +28,10 @@ public class RabbitMQConfig {
     public static final String DLX_NAME = "wallet.dlx";
     public static final String DLQ_ROUTING_KEY = "wallet.dlq.routing.key";
 
+    // Costanti per la refunding
+    public static final String REFUND_ROUTING_KEY = "game.refund.routing";
+    public static final String REFUND_QUEUE_NAME = "wallet.refund.queue";
+
     /**
      * Crea la coda persistente (durable = true).
      * Se RabbitMQ si riavvia, i messaggi non elaborati non andranno persi.
@@ -60,6 +64,27 @@ public class RabbitMQConfig {
     @Bean
     public Binding binding(Queue walletQueue, TopicExchange gameExchange) {
         return BindingBuilder.bind(walletQueue).to(gameExchange).with(ROUTING_KEY);
+    }
+
+    /**
+     * 1. Creazione della coda per i rimborsi.
+     */
+    @Bean
+    public Queue refundQueue() {
+        return QueueBuilder.durable(REFUND_QUEUE_NAME)
+                .withArgument("x-dead-letter-exchange", DLX_NAME)
+                .withArgument("x-dead-letter-routing-key", DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    /**
+     * 2. Binding per i rimborsi.
+     */
+    @Bean
+    public Binding refundBinding(Queue refundQueue, TopicExchange gameExchange) {
+        return BindingBuilder.bind(refundQueue)
+                .to(gameExchange)
+                .with(REFUND_ROUTING_KEY);
     }
 
     /**

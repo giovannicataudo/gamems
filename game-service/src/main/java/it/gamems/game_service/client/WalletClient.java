@@ -53,10 +53,11 @@ public class WalletClient {
      * Chiama l'endpoint del Wallet per scalare i soldi della puntata.
      * @param userId L'ID dell'utente che sta giocando.
      * @param amount L'importo da scalare.
+     * @param matchId L'ID della partita (Game)
      * Iniezione api-key interna
      * @throws RuntimeException se il saldo è insufficiente o il servizio è offline.
      */
-    public void debitWallet(String userId, BigDecimal amount) {
+    public void debitWallet(String userId, BigDecimal amount, Long matchId) {
         log.info("Chiamata sincrona al Wallet per utente [{}]: debito di {}€", userId, amount);
 
         try {
@@ -67,7 +68,7 @@ public class WalletClient {
                     // Inezione Api-Key interna
                     .header("X-Internal-Secret", appConfig.getInternal().getSecret())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new WalletAmountDto(amount))
+                    .body(new WalletBetDto(amount, matchId))
                     .retrieve()
                     // Se il Wallet risponde con 4xx o 5xx, viene lanciata un'eccezione
                     .onStatus(status -> status.isError(), (request, response) -> {

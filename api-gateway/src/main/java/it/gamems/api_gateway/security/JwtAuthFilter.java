@@ -12,9 +12,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.HandlerFilterFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
+import io.jsonwebtoken.security.SignatureException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import it.gamems.api_gateway.config.AppConfig;
 import it.gamems.api_gateway.service.BlacklistService;
@@ -32,6 +37,9 @@ import it.gamems.api_gateway.service.BlacklistService;
  */
 @Configuration
 public class JwtAuthFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
+
 
     private final AppConfig appConfig;
     private final BlacklistService blacklistService;
@@ -103,10 +111,25 @@ public class JwtAuthFilter {
                 // passorlo poi all'url di destinazione (e quindi al servizio)
                 return next.handle(modifiedRequest);
 
+            } catch (ExpiredJwtException e) {
+                // CASO 1: SCADENZA FISIOLOGICA
+                // Il token è valido ma scaduto. Avvisiamo il frontend in modo pulito.
+                log.debug("Token scaduto per la richiesta: {}", request.uri());
+                return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                        .header("X-Token-Expired", "true") // Iniettiamo l'header
+                        .build();
+                        
+            } catch (SignatureException | MalformedJwtException e) {
+                // CASO 2: TENTATIVO DI MANOMISSIONE
+                // Qualcuno ha alterato il payload o la firma. Possibile attacco.
+                log.warn("🚨 ALLARME SICUREZZA: Tentativo di manomissione del token rilevato da IP o per l'URI: {}", request.uri());
+                return ServerResponse.status(HttpStatus.UNAUTHORIZED)
+                        .header("X-Token-Invalid", "true")
+                        .build();
+                        
             } catch (Exception e) {
-                // 4. FALLBACK DI SICUREZZA
-                // Qualsiasi errore (firma invalida, token scaduto, JSON malformato)
-                // si traduce istantaneamente in un blocco senza ulteriori spiegazioni al client
+                // CASO 3: ERRORE GENERICO E IMPREVISTO
+                log.error("Errore imprevisto durante la validazione del token", e);
                 return ServerResponse.status(HttpStatus.UNAUTHORIZED).build();
             }
         };

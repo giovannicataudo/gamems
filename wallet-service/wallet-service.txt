@@ -451,6 +451,7 @@ FILE: ./src/main/java/it/gamems/wallet_service/controller/InternalWalletControll
 package it.gamems.wallet_service.controller;
 
 import it.gamems.wallet_service.dto.AmountRequestDto;
+import it.gamems.wallet_service.dto.BetRequestDto;
 import it.gamems.wallet_service.service.WalletService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -489,12 +490,12 @@ public class InternalWalletController {
     @PostMapping("/bet")
     public ResponseEntity<String> processBet(
             @RequestHeader("X-User-Id") String userId,
-            @Valid @RequestBody AmountRequestDto request) {
+            @Valid @RequestBody BetRequestDto request) {
         
-        log.info("Ricevuta richiesta interna di bet per utente [{}]: {}€", userId, request.amount());
+        log.info("Ricevuta richiesta interna di bet per utente [{}]: {}€ per partita #{}", userId, request.amount(), request.matchId());
         
         // Esecuzione della logica di business (Playthrough 1x e verifica saldo)
-        walletService.processGameBet(userId, request.amount());
+        walletService.processGameBet(userId, request.amount(), request.matchId());
         
         return ResponseEntity.ok("Puntata di " + request.amount() + "€ accettata e scalata con successo.");
     }
@@ -550,6 +551,10 @@ public class RabbitMQConfig {
     public static final String DLX_NAME = "wallet.dlx";
     public static final String DLQ_ROUTING_KEY = "wallet.dlq.routing.key";
 
+    // Costanti per la refunding
+    public static final String REFUND_ROUTING_KEY = "game.refund.routing";
+    public static final String REFUND_QUEUE_NAME = "wallet.refund.queue";
+
     /**
      * Crea la coda persistente (durable = true).
      * Se RabbitMQ si riavvia, i messaggi non elaborati non andranno persi.
@@ -582,6 +587,27 @@ public class RabbitMQConfig {
     @Bean
     public Binding binding(Queue walletQueue, TopicExchange gameExchange) {
         return BindingBuilder.bind(walletQueue).to(gameExchange).with(ROUTING_KEY);
+    }
+
+    /**
+     * 1. Creazione della coda per i rimborsi.
+     */
+    @Bean
+    public Queue refundQueue() {
+        return QueueBuilder.durable(REFUND_QUEUE_NAME)
+                .withArgument("x-dead-letter-exchange", DLX_NAME)
+                .withArgument("x-dead-letter-routing-key", DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    /**
+     * 2. Binding per i rimborsi.
+     */
+    @Bean
+    public Binding refundBinding(Queue refundQueue, TopicExchange gameExchange) {
+        return BindingBuilder.bind(refundQueue)
+                .to(gameExchange)
+                .with(REFUND_ROUTING_KEY);
     }
 
     /**
@@ -672,9 +698,11 @@ import it.gamems.wallet_service.dto.WalletAdjustmentRequestDto;
 import it.gamems.wallet_service.dto.WalletResponseDto;
 import it.gamems.wallet_service.entity.ProcessedEvent;
 import it.gamems.wallet_service.entity.Wallet;
+import it.gamems.wallet_service.entity.WalletTransaction;
 import it.gamems.wallet_service.exception.WalletOperationException;
 import it.gamems.wallet_service.repository.ProcessedEventRepository;
 import it.gamems.wallet_service.repository.WalletRepository;
+import it.gamems.wallet_service.repository.WalletTransactionRepository;
 
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -684,6 +712,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.retry.annotation.Retryable;
 
+import java.util.Optional;
 import java.math.BigDecimal;
 
 /**
@@ -706,13 +735,16 @@ public class WalletService {
 
     private final WalletRepository walletRepository;
     private final ProcessedEventRepository processedEventRepository;
+    private final WalletTransactionRepository transactionRepository;
     private final PaymentGatewayClient paymentClient;
 
     private static final Logger log = LoggerFactory.getLogger(WalletService.class);
 
     public WalletService(WalletRepository walletRepository, PaymentGatewayClient paymentClient,
-        ProcessedEventRepository processedEventRepository) {
+        ProcessedEventRepository processedEventRepository,
+        WalletTransactionRepository transactionRepository) {
         this.walletRepository = walletRepository;
+        this.transactionRepository = transactionRepository;
         this.paymentClient = paymentClient;
         this.processedEventRepository = processedEventRepository;
     }
@@ -785,7 +817,15 @@ public class WalletService {
             maxAttempts = 3, 
             backoff = @Backoff(delay = 100) // Attesa di 100 millisecondi tra un tentativo e l'altro
     )
-    public void processGameBet(String userId, BigDecimal betAmount) {
+    public void processGameBet(String userId, BigDecimal betAmount, Long matchId) {
+
+        // 1. VERIFICA IDEMPOTENZA (Scudo anti-duplicati REST)
+        // Se troviamo già una transazione di tipo DEBIT per questo matchId, ignoriamo.
+        if (transactionRepository.findByMatchId(matchId).isPresent()) {
+            log.warn("IDEMPOTENZA: Addebito per partita #{} già eseguito. Salto l'operazione.", matchId);
+            return;
+        }
+
         Wallet wallet = getOrCreateWallet(userId);
         
         BigDecimal totalAvailable = wallet.getRealBalance().add(wallet.getWithdrawableBalance());
@@ -811,6 +851,54 @@ public class WalletService {
         }
 
         walletRepository.save(wallet);
+
+        // 2. SCRITTURA LIBRO MASTRO (FONDAMENTALE per la Saga)
+        // Registriamo il debito in modo che il sistema di rimborso possa rintracciarlo.
+        transactionRepository.save(new WalletTransaction(userId, matchId, betAmount, "DEBIT"));
+
+        log.info("Addebito confermato per partita #{}: {}€ scalati all'utente [{}].", matchId, betAmount, userId);
+    }
+
+    /**
+     * NUOVO METODO: Compensazione Saga (Asincrona RabbitMQ).
+     * Chiamato quando il GameService segnala un fallimento dopo l'invio della bet.
+     */
+    @Transactional
+    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3)
+    public void processRefund(Long matchId, String userId, BigDecimal amount) {
+        log.info("Ricevuta richiesta di compensazione per partita #{}...", matchId);
+
+        // 1. VERIFICA REALE NECESSITÀ
+        // Controlliamo se avevamo effettivamente scalato i soldi.
+        Optional<WalletTransaction> debitTx = transactionRepository.findByMatchId(matchId);
+
+        if (debitTx.isEmpty()) {
+            // Se non c'è il debito, non dobbiamo rimborsare nulla. 
+            // Significa che la chiamata REST era fallita prima di toccare il saldo.
+            log.info("Compensazione ignorata: nessun addebito trovato per la partita #{}.", matchId);
+            return;
+        }
+
+        // 2. EVITIAMO DOPPI RIMBORSI
+        if ("REFUND".equals(debitTx.get().getTransactionType())) {
+            log.warn("La partita #{} è già stata rimborsata. Operazione ignorata.", matchId);
+            return;
+        }
+
+        // 3. ESECUZIONE RIMBORSO
+        Wallet wallet = getOrCreateWallet(userId);
+        // Restituiamo i soldi nel saldo REALE (per semplicità e correttezza fiscale)
+        wallet.setRealBalance(wallet.getRealBalance().add(amount));
+        walletRepository.save(wallet);
+
+        // 4. AGGIORNAMENTO STATO TRANSAZIONE (NON CANCELLARE!)
+        // Modifichiamo il tipo di transazione per mantenere lo storico e bloccare futuri retry della REST
+        WalletTransaction tx = debitTx.get();
+        // Aggiungi il metodo setTransactionType nella tua entity WalletTransaction se non c'è
+        tx.setTransactionType("REFUNDED"); 
+        transactionRepository.save(tx);
+
+        log.info("✅ COMPENSAZIONE COMPLETATA: Rimborsati {}€ per partita #{} all'utente [{}].", amount, matchId, userId);
     }
 
     /**
@@ -912,6 +1000,23 @@ public interface ProcessedEventRepository extends JpaRepository<ProcessedEvent, 
 }
 
 ==================================================
+FILE: ./src/main/java/it/gamems/wallet_service/repository/WalletTransactionRepository.java
+==================================================
+package it.gamems.wallet_service.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
+
+import it.gamems.wallet_service.entity.WalletTransaction;
+
+public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long>{
+    Optional<WalletTransaction> findByMatchId(Long matchId);
+    
+}
+
+
+==================================================
 FILE: ./src/main/java/it/gamems/wallet_service/repository/WalletRepository.java
 ==================================================
 package it.gamems.wallet_service.repository;
@@ -1002,6 +1107,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -1129,6 +1235,17 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
+    // Se c'è una concorrenza il servizio aspetta e retrya 3 volte ma superate queste
+    // tre volte viene sollevato questo errore.
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<String> handleOptimisticLocking(ObjectOptimisticLockingFailureException ex) {
+        log.warn("Conflitto di concorrenza rilevato sul Wallet. Transazione respinta.");
+        // Il codice 409 Conflict istruisce il frontend che la richiesta era valida, 
+        // ma lo stato del server è cambiato nel frattempo.
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("Elaborazione in corso. Riprova tra un istante.");
+    }
+
     /**
      * GESTORE 3: Fallback Globale (Catch-All)
      * Intercetta qualsiasi altro errore imprevisto (es. Database offline, NullPointer).
@@ -1187,6 +1304,71 @@ public class PaymentGatewayException extends RuntimeException {
     public PaymentGatewayException(String message) {
         super(message);
     }
+}
+
+==================================================
+FILE: ./src/main/java/it/gamems/wallet_service/entity/WalletTransaction.java
+==================================================
+package it.gamems.wallet_service.entity;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * ========================================================\n *
+ *  ENTITY: WalletTransaction (Libro Mastro)
+ *  Traccia in modo immutabile ogni singolo movimento di denaro.
+ * ========================================================\n *
+ */
+@Entity
+@Table(name = "wallet_transactions")
+public class WalletTransaction {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private String userId;
+
+    // L'ID della partita generato dal Game Service. È il nostro "Ponte" tra i due db.
+    @Column(name = "match_id", nullable = false, unique = true)
+    private Long matchId;
+
+    @Column(nullable = false)
+    private BigDecimal amount;
+
+    // DEBIT (Scommessa) o REFUND (Rimborso compensativo)
+    @Column(nullable = false)
+    private String transactionType; 
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // Costruttori, Getter e Setter
+    public WalletTransaction() {}
+
+    public WalletTransaction(String userId, Long matchId, BigDecimal amount, String transactionType) {
+        this.userId = userId;
+        this.matchId = matchId;
+        this.amount = amount;
+        this.transactionType = transactionType;
+    }
+
+    public Long getId() { return id; }
+    public String getUserId() { return userId; }
+    public Long getMatchId() { return matchId; }
+    public BigDecimal getAmount() { return amount; }
+    public String getTransactionType() { return transactionType; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public void setTransactionType(String transactionType) { this.transactionType = transactionType; }
 }
 
 ==================================================
@@ -1513,6 +1695,18 @@ public record AmountRequestDto(
 
 
 ==================================================
+FILE: ./src/main/java/it/gamems/wallet_service/dto/BetRequestDto.java
+==================================================
+package it.gamems.wallet_service.dto;
+
+import java.math.BigDecimal;
+
+public record BetRequestDto(
+        BigDecimal amount,
+        Long matchId
+) {}
+
+==================================================
 FILE: ./src/main/java/it/gamems/wallet_service/dto/WalletAdjustmentRequestDto.java
 ==================================================
 package it.gamems.wallet_service.dto;
@@ -1661,6 +1855,19 @@ public class DlqMaintenanceWorker {
 }
 
 ==================================================
+FILE: ./src/main/java/it/gamems/wallet_service/event/RefundRequestEventDto.java
+==================================================
+package it.gamems.wallet_service.event;
+
+import java.math.BigDecimal;
+
+public record RefundRequestEventDto(
+        Long matchId,
+        String userId,
+        BigDecimal amount
+) {}
+
+==================================================
 FILE: ./src/main/java/it/gamems/wallet_service/event/GameResultListener.java
 ==================================================
 package it.gamems.wallet_service.event;
@@ -1762,6 +1969,65 @@ public record GameResultEventDto(
         // Sarà 0.00 se hasWon è false.
         BigDecimal winAmount
 ) {
+}
+
+==================================================
+FILE: ./src/main/java/it/gamems/wallet_service/event/GameRefundListener.java
+==================================================
+package it.gamems.wallet_service.event;
+
+import it.gamems.wallet_service.config.RabbitMQConfig;
+import it.gamems.wallet_service.service.WalletService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Component;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
+
+/**
+ * ========================================================
+ * CONSUMER: GameResultListener
+ * ========================================================
+ * Componente sempre in ascolto sulla coda specificata.
+ * Sfrutta i Virtual Threads (se abilitati a livello di factory AMQP) 
+ * per elaborare decine di migliaia di vittorie al secondo senza bloccare la CPU.
+ */
+@Component
+public class GameRefundListener {
+
+    private static final Logger log = LoggerFactory.getLogger(GameResultListener.class);
+    private final WalletService walletService;
+
+    public GameRefundListener(WalletService walletService) {
+        this.walletService = walletService;
+    }
+
+    /**
+     * LISTENER DI COMPENSAZIONE: Gestisce i rimborsi automatici.
+     * Si mette in ascolto sulla coda dei rimborsi alimentata dal GameService.
+     */
+    @RabbitListener(queues = RabbitMQConfig.REFUND_QUEUE_NAME)
+    public void handleRefundRequest(RefundRequestEventDto event) {
+        
+        log.warn("📥 RICEVUTA RICHIESTA DI COMPENSAZIONE: Partita #{} per l'utente [{}]. Importo da verificare: {}€", 
+                event.matchId(), event.userId(), event.amount());
+
+        try {
+            // Chiamata al metodo del Service che abbiamo blindato con il Libro Mastro
+            walletService.processRefund(event.matchId(), event.userId(), event.amount());
+            
+        } catch (DataIntegrityViolationException e) {
+            // ERRORE FATALE: Se i dati nel messaggio sono corrotti (es. ID null)
+            log.error("Dati di rimborso non validi per la partita [{}]. Messaggio scartato in DLQ.", event.matchId());
+            throw new AmqpRejectAndDontRequeueException("Refund data invalid", e);
+            
+        } catch (Exception e) {
+            // ERRORE TRANSITORIO: Es: Database temporaneamente occupato
+            log.warn("Errore temporaneo durante il rimborso della partita [{}]. Riprovo...", event.matchId());
+            throw new RuntimeException("Retry rimborso", e);
+        }
+    }
 }
 
 ==================================================

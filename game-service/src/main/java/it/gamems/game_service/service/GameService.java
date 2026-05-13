@@ -114,7 +114,7 @@ public class GameService {
 
         try {
             // Chiamata sincrona al Wallet per scalare i fondi.
-            walletClient.debitWallet(userId, request.betAmount());
+            walletClient.debitWallet(userId, request.betAmount(), game.getId());
             
         } catch (GameOperationException e) {
             // Gestione: Il Wallet ha risposto, ma ha rifiutato l'operazione (es. Saldo insufficiente)
@@ -123,19 +123,27 @@ public class GameService {
             persistenceService.updateGameStatus(game.getId(), GameStatus.FAILED);
             throw e; // Rilanciamo: Il GlobalExceptionHandler restituirà un 400 Bad Request
             
-        } catch (ExternalServiceException e) {
-            // Gestione: Il Wallet è offline, in timeout o ha restituito un errore 500
-            log.error("Disconnessione dal Wallet per l'utente [{}]. Marco la partita [{}] come FAILED.", 
-                    userId, game.getId());
-            persistenceService.updateGameStatus(game.getId(), GameStatus.FAILED);
-            throw e; // Rilanciamo: Il GlobalExceptionHandler restituirà un 503 Service Unavailable
-            
         } catch (Exception e) {
-            // Fallback: Qualcosa di totalmente imprevisto è esploso nel nostro stesso GameService
-            log.error("Errore di sistema critico durante l'elaborazione della partita [{}]. Marco come FAILED.", 
-                    game.getId(), e);
+            // CASO B: TIMEOUT O ERRORE DI SISTEMA
+            // 'Exception' fa da rete a strascico catturando sia ExternalServiceException 
+            // che qualsiasi altro errore imprevisto a runtime.
+            log.error("Disconnessione o Errore Critico per l'utente [{}]. Marco la partita [{}] come FAILED ed EMETTO EVENTO DI RIMBORSO.", 
+                    userId, game.getId(), e);
+            
             persistenceService.updateGameStatus(game.getId(), GameStatus.FAILED);
-            throw e; // Rilanciamo: Il GlobalExceptionHandler restituirà un 500 Internal Server Error
+            
+            // FONDAMENTALE: Diciamo subito al Wallet "Se ti sono arrivati i soldi per questa giocata, restituiscili!"
+            eventPublisher.publishRefundRequest(game.getId(), userId, request.betAmount());
+            
+            // Rilanciamo l'eccezione originale se è una di quelle previste,
+            // altrimenti la incapsuliamo in una RuntimeException genitore.
+            if (e instanceof ExternalServiceException) {
+                throw (ExternalServiceException) e;
+            } else if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            } else {
+                throw new RuntimeException("Errore di sistema critico.", e);
+            }
         }
 
         // Se arriviamo qui, i soldi sono stati scalati con successo.
