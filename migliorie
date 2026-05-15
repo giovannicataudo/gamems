@@ -1,5 +1,0 @@
-scrivere i file YAML che descrivono l'intero ecosistema:
-
-Secret: Per le password e la JWT Secret.
-ConfigMap: Per le URL dei servizi e le origini CORS.
-Deployment & Service: Per far girare i pod.

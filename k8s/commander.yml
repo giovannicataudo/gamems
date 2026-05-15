@@ -20,7 +20,8 @@ spec:
     spec:
       containers:
       - name: redis-commander
-        image: rediscommander/redis-commander:latest
+        image: ghcr.io/joeferner/redis-commander:0.9.0
+        imagePullPolicy: IfNotPresent
         env:
         - name: REDIS_HOSTS
           value: "GamemsRedis:redis-service:6379"
