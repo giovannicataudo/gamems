@@ -91,7 +91,7 @@ spec:
   ingress:
   - from:
     - podSelector: { matchLabels: { app: api-gateway } }
-    - podSelector: { matchLabels: { app: game-service } } # La tua eccezione specifica!
+    - podSelector: { matchLabels: { app: game-service } }
 
 ---
 # ==========================================
