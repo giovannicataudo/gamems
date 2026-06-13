@@ -102,3 +102,17 @@ Essi vengono prelevati direttamente da variabili d'ambiente fornite esternamente
 - In Kubernetes tramite il secret configurato nel file `k8s/gamems-secret.yml` e il map in `k8s/gamems-configmap.yml`.
 
 In caso di deploy in un ambiente di produzione reale, è fortemente raccomandato iniettare questi segreti attraverso sistemi di Vault management sicuri.
+
+## 📈 Autoscaling e Performance
+
+**Horizontal Pod Autoscaler (HPA)**
+Il cluster K3s è configurato per scalare automaticamente il numero di repliche dei microservizi sotto carico, basandosi sul consumo della CPU:
+- **Game Service:** Scala fino a 5 repliche al 60% di CPU.
+- **API Gateway:** Scala fino a 4 repliche al 75% di CPU.
+- **User & Wallet Service:** Scalano fino a 3 repliche al 70% di CPU.
+- **Frontend App:** Scala fino a 2 repliche al 80% di CPU.
+
+L'autoscaling garantisce che la piattaforma mantenga alte prestazioni nei momenti di picco di gioco, per poi ridurre il numero di pod quando il traffico diminuisce, risparmiando risorse.
+
+**Build Docker Ottimizzate**
+Ogni microservizio Java è dotato di file `.dockerignore` configurato su misura, che previene l'upload del compilato (`target/`) al Docker Daemon durante la pacchettizzazione. Questo riduce radicalmente i tempi di build, abbattendo l'uso della CPU ed ottimizzando lo script `./deploy_to_k3s.sh`.

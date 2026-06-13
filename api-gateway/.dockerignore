@@ -1,0 +1,14 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE e GIT
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+*.log
+Dockerfile

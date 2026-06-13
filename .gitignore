@@ -1,2 +1,51 @@
-.vscode/*
-testo/*
+# ==========================================
+# GESTIONE IDE E STRUMENTI DI SVILUPPO
+# ==========================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*.suo
+*.iml
+*.iws
+*.ipr
+*.sln
+.classpath
+.project
+.settings/
+
+# ==========================================
+# FILE DI SISTEMA OPERATIVO
+# ==========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+
+# ==========================================
+# FILE TEMPORANEI E LOG
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+testo/
+*.env
+*.env.local
+
+# ==========================================
+# SCRIPT DI TEST E SCRATCH
+# ==========================================
+test_flow.py
+scratch/
+test_*.py
+test_*.sh

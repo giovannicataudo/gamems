@@ -41,7 +41,7 @@ kubectl wait --for=condition=ready pod -l app=game-service --timeout=120s -n $NA
 echo "✅ Microservizi Core operativi!"
 
 echo " HPA..."
-kubectl apply -f $K8S_DIR/hpa-game.yml
+kubectl apply -f $K8S_DIR/hpa-*.yml
 
 # 4. API GATEWAY E TOOLS (Dipendono dai Microservizi e Redis)
 echo "🚪 Avvio API Gateway e Tools di Management..."

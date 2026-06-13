@@ -1,23 +1,23 @@
 # ==========================================
 # HORIZONTAL POD AUTOSCALER (HPA)
-# Target: Game Deployment (CPU Bound)
+# Target: API Gateway Deployment
 # ==========================================
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: game-hpa
+  name: gateway-hpa
   namespace: gamems
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: game-deployment
+    name: api-gateway-deployment
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 4
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 60
+        averageUtilization: 75
