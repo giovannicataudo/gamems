@@ -27,8 +27,19 @@ spring:
     username: ${RABBIT_USER:guest}
     password: ${RABBIT_PASS:guest}
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
 # Configurazione Sicurezza e JWT
 app:
+  frontend-url: ${FRONTEND_URL:http://gamems.local}
   internal: # Api-Key interna per accesso alle rotte /internal
     secret: ${APP_INTERNAL_SECRET}
   jwt:

@@ -33,3 +33,4 @@ data:
   USER_HOST: "user-service"
   WALLET_HOST: "wallet-service"
   GAME_HOST: "game-service"
+  MAIL_HOST: "mailpit-service"

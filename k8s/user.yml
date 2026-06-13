@@ -43,6 +43,8 @@ spec:
           valueFrom: { secretKeyRef: { name: gamems-secrets, key: APP_JWT_SECRET } }
         - name: APP_INTERNAL_SECRET
           valueFrom: { secretKeyRef: { name: gamems-secrets, key: APP_INTERNAL_SECRET } }
+        - name: MAIL_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: MAIL_HOST } }
         resources:
           requests: { memory: "256Mi", cpu: "100m" }
           limits: { memory: "512Mi", cpu: "500m" }

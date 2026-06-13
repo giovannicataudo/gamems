@@ -57,6 +57,19 @@ public class User implements UserDetails {
     @Column(name = "lockout_end")
     private LocalDateTime lockoutEnd;
 
+    // --- Campi per MFA e Verifica Email ---
+    @Column(name = "is_email_verified", nullable = false, columnDefinition = "boolean default false")
+    private boolean isEmailVerified = false;
+
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
+
+    @Column(name = "mfa_enabled", nullable = false, columnDefinition = "boolean default false")
+    private boolean mfaEnabled = false;
+
+    @Column(name = "mfa_secret")
+    private String mfaSecret;
+
     // --- Metodi per scrivere in automatico le datetime ---
 
     @PrePersist
@@ -132,4 +145,16 @@ public class User implements UserDetails {
     
     public LocalDateTime getLockoutEnd() { return lockoutEnd; }
     public void setLockoutEnd(LocalDateTime lockoutEnd) { this.lockoutEnd = lockoutEnd; }
+
+    public boolean isEmailVerified() { return isEmailVerified; }
+    public void setEmailVerified(boolean emailVerified) { isEmailVerified = emailVerified; }
+
+    public String getEmailVerificationToken() { return emailVerificationToken; }
+    public void setEmailVerificationToken(String emailVerificationToken) { this.emailVerificationToken = emailVerificationToken; }
+
+    public boolean isMfaEnabled() { return mfaEnabled; }
+    public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
+
+    public String getMfaSecret() { return mfaSecret; }
+    public void setMfaSecret(String mfaSecret) { this.mfaSecret = mfaSecret; }
 }

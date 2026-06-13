@@ -168,7 +168,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [adminer, redis-commander]
+        values: [adminer, redis-commander, mailpit]
   policyTypes: [Ingress]
   ingress:
   - {}

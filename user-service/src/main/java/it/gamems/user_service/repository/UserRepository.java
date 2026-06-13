@@ -28,6 +28,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     /**
+     * @param token Il token inviato via mail.
+     * @return L'utente associato a questo token.
+     */
+    Optional<User> findByEmailVerificationToken(String token);
+
+    /**
      * Verifica l'esistenza di un utente prima della registrazione.
      * @param email Email da controllare.
      * @return true se l'email è già presente nel sistema.

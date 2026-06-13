@@ -7,6 +7,7 @@ import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
 import BannedPage from './pages/BannedPage';
 import AdminPage from './pages/AdminPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
@@ -55,6 +56,9 @@ export default function App() {
             path="/admin" 
             element={user?.role === 'ADMIN' ? <AdminPage /> : <Navigate to="/play" />} 
           />
+
+          {/* Rotta pubblica per la verifica email */}
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
 
           {/* Fallback: se non sai dove andare, vai al gioco o al login */}
           <Route path="*" element={<Navigate to={user ? "/play" : "/login"} />} />

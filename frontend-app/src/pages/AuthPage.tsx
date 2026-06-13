@@ -1,58 +1,65 @@
 import { useState } from 'react';
-// Strumento per "teletrasportare" l'utente in un'altra pagina
-import { useNavigate } from 'react-router-dom'; 
-// Il "postino" configurato prima
+import { useNavigate, useSearchParams } from 'react-router-dom'; 
 import { apiClient } from '../api/axiosClient';
-// La chiave della "cassaforte" globale
 import { useAuth } from '../context/AuthContext';
-// Per cercare parametri
-import { useSearchParams } from 'react-router-dom';
 
 export default function AuthPage() {
-  // --- 1. GESTIONE DELLO STATO (Le variabili di questa pagina) ---
-   // True = Modalità Login, False = Modalità Registrazione
-  const [isLogin, setIsLogin] = useState(true);
+  // Modalità: "login", "register", "mfa"
+  const [mode, setMode] = useState<'login' | 'register' | 'mfa'>('login');
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-   // Per mostrare gli errori del backend (es. "Password errata")
+  const [otpCode, setOtpCode] = useState('');
+  const [tempToken, setTempToken] = useState('');
+  
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  // Importiamo gli strumenti globali
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Ricerca del parametro per la scadenza del token
   const [searchParams] = useSearchParams();
   const isExpired = searchParams.get('expired') === 'true';
 
-  // --- 2. GESTIONE DELL'INVIO DEL FORM ---
-  // Questa funzione scatta quando l'utente preme il bottone "Accedi/Registrati"
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Blocca il comportamento di default di HTML che ricaricherebbe la pagina
-    setErrorMsg(''); // Puliamo eventuali errori precedenti
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
 
     try {
-      // Scegliamo la rotta giusta in base a cosa sta facendo l'utente
-      const endpoint = isLogin ? '/auth/login' : '/auth/register';
-      
-      // Facciamo la chiamata asincrona al backend. 
-      // Il payload corrisponde ESATTAMENTE ai tuoi LoginRequestDto / RegisterRequestDto
-      const response = await apiClient.post(endpoint, {
-        email: email,
-        password: password
-      });
-
-      // Se arriviamo qui, il tuo Spring Boot ha risposto con successo (200 o 201)
-      // Passiamo il payload in arrivo (AuthResponseDto) al nostro cervello globale
-      // Faccio atterrare tutti su /play (sia admin che user)
-      login(response.data);
-      navigate('/play');
+      if (mode === 'register') {
+        await apiClient.post('/auth/register', { email, password });
+        setSuccessMsg("Account creato! Controlla la tua casella email per verificare l'indirizzo.");
+        // Reset the form but keep them on the page to read the message
+        setEmail('');
+        setPassword('');
+      } 
+      else if (mode === 'login') {
+        const response = await apiClient.post('/auth/login', { email, password });
+        
+        // Se il backend risponde con tempToken, ci serve il MFA
+        if (response.data.tempToken) {
+          setTempToken(response.data.tempToken);
+          setMode('mfa');
+        } else {
+          // Fallback (se il backend fosse configurato per bypassare MFA in alcuni casi)
+          login(response.data);
+          navigate('/play');
+        }
+      }
+      else if (mode === 'mfa') {
+        const response = await apiClient.post('/auth/login/mfa', {
+          tempToken: tempToken,
+          code: otpCode
+        });
+        
+        // Riceviamo il JWT finale
+        login(response.data);
+        navigate('/play');
+      }
 
     } catch (error: any) {
-      // --- 3. GESTIONE ERRORI ---
-      // Catturiamo gli errori (es. il 401 BadCredentialsException o il 409 UserAlreadyExistsException)
       if (error.response && error.response.data && error.response.data.message) {
-        // Estraiamo il messaggio dal tuo ErrorResponseDto!
         setErrorMsg(error.response.data.message);
       } else {
         setErrorMsg("Si è verificato un errore di connessione col server.");
@@ -60,83 +67,121 @@ export default function AuthPage() {
     }
   };
 
-  // --- 4. DISEGNO DELL'INTERFACCIA (JSX + Tailwind) ---
   return (
-    // Sfondo a tutto schermo, contenuto centrato
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      {/* La "Card" bianca del form */}
       <div className="bg-slate-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
         
-        {/* Titolo dinamico */}
         <h2 className="text-3xl font-bold text-white text-center mb-6">
-          {isLogin ? 'Accedi al Gioco' : 'Crea un Account'}
+          {mode === 'login' && 'Accedi al Gioco'}
+          {mode === 'register' && 'Crea un Account'}
+          {mode === 'mfa' && 'Verifica a Due Passi'}
         </h2>
 
-        {/* Box per gli errori (visibile solo se errorMsg non è vuoto) */}
         {errorMsg && (
           <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded mb-4 text-sm">
             {errorMsg}
           </div>
         )}
 
-        {isExpired && (
+        {successMsg && (
+          <div className="bg-emerald-500/10 border border-emerald-500 text-emerald-400 p-3 rounded mb-4 text-sm font-semibold">
+            {successMsg}
+          </div>
+        )}
+
+        {isExpired && mode === 'login' && !successMsg && (
           <div className="bg-amber-500/10 border border-amber-500 text-amber-500 p-3 rounded text-sm mb-4 text-center">
-          La tua sessione è scaduta per inattività. Effettua di nuovo l'accesso.
+            La tua sessione è scaduta per inattività. Effettua di nuovo l'accesso.
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Campo Email */}
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)} // Aggiorna lo stato ad ogni tasto premuto
-              className="w-full p-3 rounded bg-slate-900 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none"
-              placeholder="giocatore@esempio.com"
-            />
-          </div>
+          
+          {(mode === 'login' || mode === 'register') && (
+            <>
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-3 rounded bg-slate-900 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none"
+                  placeholder="giocatore@esempio.com"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 rounded bg-slate-900 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+            </>
+          )}
 
-          {/* Campo Password */}
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">Password</label>
-            <input
-              type="password"
-              required
-              // Il tuo RegisterRequestDto richiede min 8 caratteri, lo forziamo anche qui nell'HTML
-              minLength={8} 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 rounded bg-slate-900 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none"
-              placeholder="••••••••"
-            />
-          </div>
+          {mode === 'mfa' && (
+            <div>
+              <label className="block text-slate-300 mb-1 text-sm text-center">Inserisci il codice a 6 cifre</label>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} // Solo numeri
+                className="w-full p-3 rounded bg-slate-900 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none text-center tracking-widest text-xl font-mono"
+                placeholder="123456"
+              />
+            </div>
+          )}
 
-          {/* Bottone Invio */}
           <button
             type="submit"
             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded transition-colors"
           >
-            {isLogin ? 'Entra' : 'Registrati'}
+            {mode === 'login' && 'Entra'}
+            {mode === 'register' && 'Registrati'}
+            {mode === 'mfa' && 'Verifica'}
           </button>
         </form>
 
-        {/* Il Toggle ("L'interruttore" Login/Registrazione) */}
-        <div className="mt-6 text-center text-slate-400 text-sm">
-          {isLogin ? "Non hai un account? " : "Hai già un account? "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin); // Inverte lo stato
-              setErrorMsg(''); // Pulisce gli errori cambiando modalità
-            }}
-            className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
-          >
-            {isLogin ? 'Registrati ora' : 'Accedi'}
-          </button>
-        </div>
+        {(mode === 'login' || mode === 'register') && (
+          <div className="mt-6 text-center text-slate-400 text-sm">
+            {mode === 'login' ? "Non hai un account? " : "Hai già un account? "}
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login');
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+              className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
+            >
+              {mode === 'login' ? 'Registrati ora' : 'Accedi'}
+            </button>
+          </div>
+        )}
+
+        {mode === 'mfa' && (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setOtpCode('');
+                setErrorMsg('');
+              }}
+              className="text-slate-400 hover:text-white text-sm underline"
+            >
+              Torna al Login
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

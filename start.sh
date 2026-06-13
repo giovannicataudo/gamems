@@ -48,6 +48,7 @@ echo "🚪 Avvio API Gateway e Tools di Management..."
 kubectl apply -f $K8S_DIR/gateway.yml -n $NAMESPACE
 kubectl apply -f $K8S_DIR/adminer.yml -n $NAMESPACE
 kubectl apply -f $K8S_DIR/commander.yml -n $NAMESPACE
+kubectl apply -f $K8S_DIR/mailpit.yml -n $NAMESPACE
 
 echo "⏳ Attesa API Gateway (Max 60s)..."
 kubectl wait --for=condition=ready pod -l app=api-gateway --timeout=60s -n $NAMESPACE
@@ -68,6 +69,7 @@ echo "🔗 App Principale: http://gamems.local"
 echo "🗄️  Database UI:  http://localhost:32080"
 echo "🐇 RabbitMQ UI:  http://localhost:31672"
 echo "🔴 Redis UI:     http://localhost:32081"
+echo "📧 Mailpit UI:   http://localhost:32025"
 echo "========================================="
 
 # Mostra lo stato finale pulito

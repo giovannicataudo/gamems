@@ -60,6 +60,23 @@ services:
           cpus: '0.1'
           memory: 64M
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "8025:8025"
+    networks:
+      - backend-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+
   # ==========================================
   # LIVELLO 2: MICROSERVIZI CORE
   # ==========================================
@@ -70,6 +87,7 @@ services:
     environment:
       - RABBIT_HOST=rabbitmq-broker
       - DB_HOST=postgres-db
+      - MAIL_HOST=mailpit
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
       - APP_JWT_SECRET=LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!
       - APP_INTERNAL_SECRET=LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!

@@ -16,6 +16,7 @@ Il sistema è composto dai seguenti blocchi principali:
 - **PostgreSQL**: Database relazionale primario. Suddiviso logicamente per ogni microservizio (`user_db`, `game_db`, `wallet_db`).
 - **RabbitMQ**: Message Broker utilizzato per la comunicazione asincrona e ad eventi tra i microservizi.
 - **Redis**: Livello di caching e database in-memory, sfruttato dall'API Gateway per funzionalità come il Rate Limiting (Bucket4j).
+- **Mailpit**: Server SMTP locale e interfaccia web per l'intercettazione e la verifica delle email (es. link di registrazione).
 
 ## 🚀 Pre-requisiti
 
@@ -75,6 +76,7 @@ Se le immagini sono già presenti nel registro di K3s, puoi avviare e fermare l'
    - **Database UI (Adminer):** `http://localhost:32080`
    - **RabbitMQ UI:** `http://localhost:31672`
    - **Redis UI (Commander):** `http://localhost:32081`
+   - **Mailpit UI:** `http://localhost:32025`
 
 4. Per spegnere o ridurre a zero le repliche del cluster (Scale-to-0):
    ```bash
@@ -85,6 +87,12 @@ Se le immagini sono già presenti nel registro di K3s, puoi avviare e fermare l'
 
 **Traffico Esterno (HTTPS):**
 L'accesso all'applicazione tramite Kubernetes avviene in modo sicuro tramite protocollo `HTTPS` (`https://gamems.local`). La cifratura e la "TLS Termination" sono delegate all'Ingress Controller (Traefik), che sfrutta un certificato iniettato tramite il secret `gamems-tls`, garantendo che tutte le interazioni del client (inclusi gli invii di credenziali) viaggino protette su rete.
+
+**Verifica Email e Multi-Factor Authentication (MFA):**
+La piattaforma supporta l'autenticazione a più fattori basata su TOTP (Time-based One-Time Password).
+1. Al momento della registrazione, l'utente è disabilitato finché non verifica il proprio indirizzo tramite un link temporaneo inviato per email (intercettato da Mailpit in locale).
+2. Alla verifica, il backend genera un **QR Code** tramite il quale l'utente collega la propria app Authenticator (es. Google Authenticator).
+3. Ogni successivo accesso richiede sia le credenziali base sia il codice numerico a 6 cifre OTP. Il JWT definitivo viene rilasciato solo dopo la validazione a due step.
 
 **Gestione Secret Interni (Credenziali e JWT):**
 
