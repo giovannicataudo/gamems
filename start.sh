@@ -11,6 +11,7 @@ echo "🛡️  Configurazione Namespace, Sicurezza e Variabili..."
 kubectl apply -f $K8S_DIR/00-namespace.yml
 kubectl apply -f $K8S_DIR/gamems-configmap.yml -n $NAMESPACE
 kubectl apply -f $K8S_DIR/gamems-secret.yml -n $NAMESPACE
+kubectl apply -f $K8S_DIR/tls-secret.yml -n $NAMESPACE
 kubectl apply -f $K8S_DIR/01-network-security.yml -n $NAMESPACE
 
 # 2. STRATO DATI E MESSAGGISTICA (Dipendenze di base)

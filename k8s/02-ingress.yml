@@ -10,9 +10,13 @@ metadata:
   name: gamems-ingress
   namespace: gamems
   annotations:
-    # Abilita l'http
-    ingress.kubernetes.io/ssl-redirect: "false" 
+    # Abilita l'http (se non si vuole forzare https mettere false, ma per ora lo forziamo)
+    ingress.kubernetes.io/ssl-redirect: "true" 
 spec:
+  tls:
+  - hosts:
+    - gamems.local
+    secretName: gamems-tls
   rules:
   - host: gamems.local
     http:

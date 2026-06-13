@@ -83,6 +83,11 @@ Se le immagini sono già presenti nel registro di K3s, puoi avviare e fermare l'
 
 ## 🔒 Sicurezza
 
+**Traffico Esterno (HTTPS):**
+L'accesso all'applicazione tramite Kubernetes avviene in modo sicuro tramite protocollo `HTTPS` (`https://gamems.local`). La cifratura e la "TLS Termination" sono delegate all'Ingress Controller (Traefik), che sfrutta un certificato iniettato tramite il secret `gamems-tls`, garantendo che tutte le interazioni del client (inclusi gli invii di credenziali) viaggino protette su rete.
+
+**Gestione Secret Interni (Credenziali e JWT):**
+
 Le password del database, le API Key e i token segreti per la firma dei JWT **non** sono hardcoded nel sorgente Java.
 Essi vengono prelevati direttamente da variabili d'ambiente fornite esternamente:
 - In locale tramite la sezione `environment` nel file `docker-compose.yml`.
