@@ -32,3 +32,4 @@ data:
   # Questi nomi verranno letti dal Gateway e dal Game Service per farsi le chiamate interne
   USER_HOST: "user-service"
   WALLET_HOST: "wallet-service"
+  GAME_HOST: "game-service"

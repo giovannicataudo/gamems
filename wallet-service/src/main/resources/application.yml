@@ -62,9 +62,9 @@ spring:
 app:
   jwt:
     # Segreta usata per firmare i token. In produzione va caricata da Vault o ENV.
-    secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+    secret: ${APP_JWT_SECRET}
   internal: # Api-Key interna per accesso alle rotte /internal
-    secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
+    secret: ${APP_INTERNAL_SECRET}
 
 # --- CONFIGURAZIONE ACTUATOR (HEALTH CHECKS) ---
 management:

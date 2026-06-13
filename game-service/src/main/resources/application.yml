@@ -69,6 +69,6 @@ app:
   wallet-service:
     url: http://${WALLET_HOST:localhost}:8082
   jwt: # Segreta usata per firmare i token.
-    secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+    secret: ${APP_JWT_SECRET}
   internal: # Api-Key interna per accesso alle rotte /internal
-    secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
+    secret: ${APP_INTERNAL_SECRET}

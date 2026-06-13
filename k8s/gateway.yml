@@ -39,6 +39,10 @@ spec:
           valueFrom: { configMapKeyRef: { name: gamems-config, key: REDIS_HOST } }
         - name: USER_HOST
           valueFrom: { configMapKeyRef: { name: gamems-config, key: USER_HOST } }
+        - name: GAME_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: GAME_HOST } }
+        - name: WALLET_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: WALLET_HOST } }
         # --- SOVRASCRITTURA DELLE CHIAVI DI SICUREZZA ---
         - name: APP_API_KEY
           valueFrom: { secretKeyRef: { name: gamems-secrets, key: APP_API_KEY } }

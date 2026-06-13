@@ -27,11 +27,15 @@ app:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:8080}
   user-service:
     url: http://${USER_HOST:localhost}:8081
-  api-key: "LaTuaApiKeyEsternaSegreta2026!"
+  game-service:
+    url: http://${GAME_HOST:localhost}:8083
+  wallet-service:
+    url: http://${WALLET_HOST:localhost}:8082
+  api-key: ${APP_API_KEY}
   jwt:
-    secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+    secret: ${APP_JWT_SECRET}
   internal:
-    secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
+    secret: ${APP_INTERNAL_SECRET}
   rate-limit:
     anonymous:
       requests: 20    # Tentativi massimi (IP)

@@ -71,6 +71,8 @@ services:
       - RABBIT_HOST=rabbitmq-broker
       - DB_HOST=postgres-db
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+      - APP_JWT_SECRET=LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!
+      - APP_INTERNAL_SECRET=LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!
     deploy:
       resources:
         limits:
@@ -94,6 +96,8 @@ services:
       - DB_HOST=postgres-db
       - RABBIT_HOST=rabbitmq-broker
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+      - APP_JWT_SECRET=LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!
+      - APP_INTERNAL_SECRET=LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!
     deploy:
       resources:
         limits:
@@ -118,6 +122,8 @@ services:
       - RABBIT_HOST=rabbitmq-broker
       - WALLET_HOST=wallet-service
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+      - APP_JWT_SECRET=LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!
+      - APP_INTERNAL_SECRET=LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!
     deploy:
       resources:
         limits:
@@ -155,8 +161,13 @@ services:
     environment:
       - RABBIT_HOST=rabbitmq-broker
       - USER_HOST=user-service
+      - GAME_HOST=game-service
+      - WALLET_HOST=wallet-service
       - REDIS_HOST=redis-cache
       - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+      - APP_JWT_SECRET=LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!
+      - APP_INTERNAL_SECRET=LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!
+      - APP_API_KEY=LaTuaApiKeyEsternaSegreta2026!
     deploy:
       resources:
         limits:

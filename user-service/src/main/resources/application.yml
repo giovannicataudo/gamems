@@ -30,10 +30,10 @@ spring:
 # Configurazione Sicurezza e JWT
 app:
   internal: # Api-Key interna per accesso alle rotte /internal
-    secret: "LaTuaChiaveSegretaInternaMoltoLungaPerComunicazioniTraMicroservizi2026!"
+    secret: ${APP_INTERNAL_SECRET}
   jwt:
     # Segreta usata per firmare i token. In produzione va caricata da Vault o ENV.
-    secret: "LaTuaChiaveSegretaMoltoLungaPerGarantireLaSicurezzaDelSistema2026!"
+    secret: ${APP_JWT_SECRET}
     # Durata del token (es. 24 ore in millisecondi)
     expiration-ms: 86400000
 # Un JWT è una stringa così formata: header.payload.signature
