@@ -11,7 +11,7 @@ data:
   # SICUREZZA E CORS
   # ==========================================
   HEALTH_SHOW_DETAILS: "never"
-  ALLOWED_ORIGINS: "http://gamems.local"
+  ALLOWED_ORIGINS: "http://gamems.local,https://gamems.local"
   
   # ==========================================
   # RISOLUZIONE DNS KUBERNETES INFRASTRUTTURA
