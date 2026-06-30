@@ -13,20 +13,6 @@ fi
 
 echo "✅ kubectl trovato."
 
-# 2. Richiesta credenziali
-echo ""
-echo "🔐 Per permettere ad ArgoCD e a Kubernetes di scaricare i manifesti e le immagini da GitHub,"
-echo "   è necessario inserire il tuo Token (Classic) con permessi 'read:packages'."
-echo ""
-read -p "👤 Inserisci il tuo Username di GitHub: " GITHUB_USER
-read -s -p "🔑 Inserisci il tuo Token GitHub (Classic): " GITHUB_TOKEN
-echo ""
-echo ""
-
-if [ -z "$GITHUB_USER" ] || [ -z "$GITHUB_TOKEN" ]; then
-    echo "❌ Errore: Username o Token mancanti. Installazione annullata."
-    exit 1
-fi
 
 # 3. Installazione ArgoCD
 echo "📦 Installazione di ArgoCD nel cluster (se non presente)..."
@@ -40,27 +26,6 @@ kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
 echo "🛡️ Creazione preventiva del namespace gamems..."
 kubectl create namespace gamems --dry-run=client -o yaml | kubectl apply -f -
 
-# 5. Creazione Secret per GitHub Container Registry (GHCR) in gamems
-echo "🐳 Configurazione del Secret Docker Registry per GHCR..."
-kubectl create secret docker-registry gamems-registry-secret \
-  -n gamems \
-  --docker-server=ghcr.io \
-  --docker-username="$GITHUB_USER" \
-  --docker-password="$GITHUB_TOKEN" \
-  --docker-email="ghcr@gamems.local" \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-# 6. Creazione del Secret per la repository Git in argocd
-echo "🔐 Configurazione del Secret per la repository privata..."
-kubectl create secret generic gamems-repo-secret \
-  -n argocd \
-  --from-literal=type=git \
-  --from-literal=url=https://github.com/giovannicataudo/gamems.git \
-  --from-literal=username="$GITHUB_USER" \
-  --from-literal=password="$GITHUB_TOKEN" \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl label secret gamems-repo-secret argocd.argoproj.io/secret-type=repository -n argocd --overwrite
 
 # 7. Applicazione dell'app ArgoCD Cloud
 echo "🚀 Avvio della sincronizzazione GitOps Cloud..."

@@ -21,8 +21,6 @@ spec:
       labels:
         app: game-service
     spec:
-      imagePullSecrets:
-      - name: gamems-registry-secret
       containers:
       - name: game-service
         image: ghcr.io/giovannicataudo/gamems-game-service:9d9f8be

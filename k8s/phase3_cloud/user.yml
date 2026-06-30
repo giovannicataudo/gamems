@@ -20,8 +20,6 @@ spec:
       labels:
         app: user-service
     spec:
-      imagePullSecrets:
-      - name: gamems-registry-secret
       containers:
       - name: user-service
         image: ghcr.io/giovannicataudo/gamems-user-service:9d9f8be

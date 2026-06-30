@@ -21,8 +21,6 @@ spec:
       labels:
         app: wallet-service
     spec:
-      imagePullSecrets:
-      - name: gamems-registry-secret
       containers:
       - name: wallet-service
         image: ghcr.io/giovannicataudo/gamems-wallet-service:9d9f8be

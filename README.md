@@ -37,8 +37,12 @@ Introduzione del paradigma GitOps. I file YAML non vengono più spinti manualmen
 ### Fase 3: GitOps Cloud (GitHub Actions + GHCR)
 Il vero paradigma Cloud-Native aziendale. Non hai più bisogno di compilare niente sul tuo computer. Fai semplicemente un `git push` del codice sorgente. **GitHub Actions** compilerà il codice, spingerà le immagini Docker nel **GitHub Container Registry (GHCR)** e aggiornerà i manifesti. ArgoCD infine ordinerà a Kubernetes di scaricare la nuova immagine da internet.
 - **Cartella Script:** `scripts/phase3_cloud/`
-- **Cartella YAML:** `k8s/phase3_cloud/` (con `imagePullPolicy: IfNotPresent` e `imagePullSecrets`)
-- **Avvio:** Esegui `./scripts/phase3_cloud/gitops_install_cloud.sh`. Ti verrà chiesto il tuo Token GitHub (Classic) con permessi `read:packages` per permettere al cluster di scaricare le immagini private da GHCR.
+- **Cartella YAML:** `k8s/phase3_cloud/`
+- **Avvio "One-Click":** Esegui `./scripts/phase3_cloud/gitops_install_cloud.sh`. Poiché la repository e le immagini sono **pubbliche**, lo script configurerà ArgoCD nel tuo cluster e inizierà a scaricare tutto da GitHub in totale autonomia. Non è richiesta alcuna password o token!
+
+> [!TIP]
+> **Come testare o clonare il progetto?**
+> Essendo un'infrastruttura Cloud-Native pubblica, chiunque può testarla! Ti basta clonare questa repository sul tuo PC, avere K3s (o Minikube) installato e lanciare lo script della Fase 3. Il tuo cluster si sincronizzerà automaticamente con le ultime immagini stabili pubblicate su GHCR.
 
 ## 🛠 Come avviare l'ambiente (Locale / Docker Compose)
 
