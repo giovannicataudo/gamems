@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/giovannicataudo/gamems-frontend-app:56d3bdd
+        image: ghcr.io/giovannicataudo/gamems-frontend-app:6087bb4
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: ghcr.io/giovannicataudo/gamems-api-gateway:56d3bdd
+        image: ghcr.io/giovannicataudo/gamems-api-gateway:6087bb4
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

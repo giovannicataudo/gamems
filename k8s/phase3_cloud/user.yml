@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: ghcr.io/giovannicataudo/gamems-user-service:56d3bdd
+        image: ghcr.io/giovannicataudo/gamems-user-service:6087bb4
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
