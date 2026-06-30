@@ -47,41 +47,34 @@ Per fermare l'infrastruttura locale:
 docker-compose down
 ```
 
-## ☸️ Come avviare l'ambiente (Cluster Kubernetes / K3s)
+## ☸️ Come avviare l'ambiente (Kubernetes / GitOps)
 
-Il progetto include tutti i manifesti Kubernetes necessari e degli script bash di automazione per accendere e spegnere agilmente il cluster.
+L'infrastruttura di GameMS su Kubernetes è gestita interamente seguendo il paradigma **GitOps** tramite **ArgoCD**.
+Non vengono più utilizzati script imperativi (`start.sh` o `stop.sh`), ma il cluster si sincronizza autonomamente in modalità *Pull* dallo stato dichiarativo presente in questo repository (nella cartella `k8s/`). L'ordine di avvio delle dipendenze è orchestrato in modo nativo tramite le **Sync Waves** di ArgoCD.
 
-**Metodo Consigliato (Script Unificato):**
-È presente uno script automatico che compila i microservizi Java, builda le immagini Docker e le inietta direttamente in K3s prima di avviare il cluster.
+**1. Requisiti GitOps (ArgoCD):**
+Assicurati di avere ArgoCD installato nel tuo cluster e di aver applicato il file `argocd-app.yml` che istruisce il controller a osservare questo repository.
+
+**2. Compilazione e caricamento immagini (Sviluppo Locale):**
+Dato che l'infrastruttura locale utilizza `imagePullPolicy: Never` (per evitare download da registri remoti), devi prima compilare i servizi e caricare le immagini nel registro interno di K3s.
+Per farlo in un solo passaggio, usa il nuovo script ottimizzato per GitOps:
 ```bash
-./deploy_to_k3s.sh
+./gitops_build.sh
 ```
-Questo script eseguirà tutte le fasi necessarie in un solo passaggio.
+*Questo script si limita a compilare il codice Java, buildare le immagini Docker e iniettarle in K3s, senza riavviare o toccare lo stato del cluster, delegando l'orchestrazione interamente ad ArgoCD.*
 
-**Avvio Manuale:**
-Se le immagini sono già presenti nel registro di K3s, puoi avviare e fermare l'infrastruttura manualmente:
-1. Avvia l'infrastruttura sul cluster:
-   ```bash
-   ./start.sh
-   ```
-   *Lo script si occuperà di creare i namespace, avviare prima lo strato dati (Postgres, RabbitMQ, Redis), attendere che siano pronti, avviare i microservizi core, il gateway e infine il frontend con il rispettivo Ingress.*
+**3. Accesso all'applicazione:**
+Il frontend sarà raggiungibile tramite Ingress. Assicurati di aggiungere al tuo file `hosts` di sistema:
+```text
+127.0.0.1 gamems.local
+```
+Dopodiché, apri il browser su: `https://gamems.local`.
 
-2. Il frontend sarà raggiungibile tramite Ingress. Assicurati di aggiungere al tuo file `hosts` di sistema:
-   ```text
-   127.0.0.1 gamems.local
-   ```
-   Dopodiché, apri il browser su: `http://gamems.local`.
-
-3. Strumenti di management:
-   - **Database UI (Adminer):** `http://localhost:32080`
-   - **RabbitMQ UI:** `http://localhost:31672`
-   - **Redis UI (Commander):** `http://localhost:32081`
-   - **Mailpit UI:** `http://localhost:32025`
-
-4. Per spegnere o ridurre a zero le repliche del cluster (Scale-to-0):
-   ```bash
-   ./stop.sh
-   ```
+**4. Strumenti di management (Accesso locale tramite NodePort):**
+- **Database UI (Adminer):** `http://localhost:32080` (Server: `postgres-service`)
+- **RabbitMQ UI:** `http://localhost:31672`
+- **Redis UI (Commander):** `http://localhost:32081`
+- **Mailpit UI:** `http://localhost:32025`
 
 ## 🔒 Sicurezza
 
