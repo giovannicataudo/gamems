@@ -1,6 +1,6 @@
 # GameMS - Piattaforma di Gioco Online
 
-GameMS è una piattaforma di gioco online moderna e scalabile, costruita su un'architettura a microservizi. Il progetto è stato concepito per dimostrare pattern avanzati di ingegneria del software, dalla containerizzazione all'orchestrazione su cluster Kubernetes, **mostrando l'evoluzione dell'infrastruttura in tre diverse fasi didattiche**.
+GameMS è nato come un progetto didattico personale per esplorare e padroneggiare gli standard aziendali dell'ingegneria del software. Nel corso del tempo, l'architettura è stata iterativamente migliorata e stratificata: partendo dallo sviluppo dei singoli microservizi (Spring Boot e React), si è evoluta verso la containerizzazione, fino a raggiungere una complessa infrastruttura Cloud-Native completamente automatizzata (Kubernetes, GitOps, CI/CD). Questa repository documenta l'**evoluzione dell'infrastruttura in tre diverse fasi di apprendimento**.
 
 ## 🏗 Architettura
 
@@ -18,9 +18,15 @@ Il sistema è composto dai seguenti blocchi principali:
 - **Redis**: Livello di caching e database in-memory.
 - **Mailpit**: Server SMTP locale per intercettare email.
 
-## 🚀 Le 3 Fasi Evolutive del Progetto (Kubernetes)
+## 🚀 Le 4 Fasi Evolutive del Progetto (Dal Locale al Cloud)
 
-Il progetto è strutturato in cartelle separate che permettono di avviare il cluster in base a tre diversi paradigmi operativi, dal più "manuale" al più "professionale (Cloud Native)".
+Il progetto è strutturato per permettere di avviare l'ambiente in base a quattro diversi paradigmi operativi, dimostrando concretamente il passaggio da un ambiente di sviluppo basilare fino al più "professionale (Cloud Native)".
+
+### Fase 0: Sviluppo Locale (Docker Compose)
+La primissima fase del progetto, ovvero il "Pre-Cluster". Ideale per lo sviluppo rapido in locale. Tutto viene fatto girare tramite un singolo comando Docker Compose senza alcun orchestratore Kubernetes di mezzo. 
+- **File Principale:** `docker-compose.yml` (nella root)
+- **Avvio:** `docker-compose up -d --build`
+- **Frontend App:** [http://localhost:8080](http://localhost:8080)
 
 ### Fase 1: Approccio Imperativo (Senza ArgoCD)
 L'approccio più semplice. Kubernetes viene gestito interamente tramite comandi bash che applicano i file YAML al cluster. Ideale per capire le basi.
@@ -42,15 +48,12 @@ Il vero paradigma Cloud-Native aziendale. Non hai più bisogno di compilare nien
 
 > [!TIP]
 > **Come testare o clonare il progetto?**
-> Essendo un'infrastruttura Cloud-Native pubblica, chiunque può testarla! Ti basta clonare questa repository sul tuo PC, avere K3s (o Minikube) installato e lanciare lo script della Fase 3. Il tuo cluster si sincronizzerà automaticamente con le ultime immagini stabili pubblicate su GHCR.
+> Essendo un'infrastruttura Cloud-Native pubblica, chiunque può testarla! Ti basta clonare questa repository sul tuo PC, avere un cluster Kubernetes attivo (K3s, Minikube, Docker Desktop) e lanciare lo script della Fase 3. Il tuo cluster si sincronizzerà automaticamente con le ultime immagini stabili pubblicate sul GHCR originale.
+> *(Nota: Le Fasi 1 e 2, poiché iniettano le immagini compilate in locale direttamente nel runtime del nodo, sono scriptate specificamente per K3s. La Fase 3 invece scarica dal cloud, quindi è universale per qualsiasi cluster K8s).*
+> 
+> Se invece vuoi **sviluppare** la tua versione, ti basterà fare un *Fork* su GitHub e modificare il file `argocd-apps/argocd-app-cloud.yml` inserendo il link alla tua repository. GitHub Actions, grazie a degli script intelligenti, aggiornerà tutti i percorsi delle immagini in totale autonomia ad ogni tuo push!
 
-## 🛠 Come avviare l'ambiente (Locale / Docker Compose)
 
-Il progetto è dotato di un file `docker-compose.yml` preconfigurato.
-```bash
-docker-compose up -d --build
-```
-- **Frontend App:** [http://localhost:8080](http://localhost:8080)
 
 ## ☸️ Accesso all'applicazione (Kubernetes)
 

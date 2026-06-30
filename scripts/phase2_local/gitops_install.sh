@@ -13,21 +13,6 @@ fi
 
 echo "✅ kubectl trovato."
 
-# 2. Richiesta credenziali
-echo ""
-echo "🔐 Per permettere ad ArgoCD di scaricare i file dalla tua repository privata,"
-echo "   è necessario inserire le tue credenziali GitHub."
-echo "   (Usa il Token Fine-Grained di Sola Lettura appena generato!)"
-echo ""
-read -p "👤 Inserisci il tuo Username di GitHub: " GITHUB_USER
-read -s -p "🔑 Inserisci il tuo Token GitHub (Read-Only): " GITHUB_TOKEN
-echo ""
-echo ""
-
-if [ -z "$GITHUB_USER" ] || [ -z "$GITHUB_TOKEN" ]; then
-    echo "❌ Errore: Username o Token mancanti. Installazione annullata."
-    exit 1
-fi
 
 # 3. Installazione ArgoCD
 echo "📦 Installazione di ArgoCD nel cluster (se non presente)..."
@@ -37,17 +22,6 @@ kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argop
 echo "⏳ Attesa che i componenti di ArgoCD siano pronti (potrebbe volerci un minuto)..."
 kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
 
-# 4. Creazione del Secret per la repository
-echo "🔐 Configurazione del Secret per la repository privata..."
-kubectl create secret generic gamems-repo-secret \
-  -n argocd \
-  --from-literal=type=git \
-  --from-literal=url=https://github.com/giovannicataudo/gamems.git \
-  --from-literal=username="$GITHUB_USER" \
-  --from-literal=password="$GITHUB_TOKEN" \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl label secret gamems-repo-secret argocd.argoproj.io/secret-type=repository -n argocd --overwrite
 
 # 5. Build delle immagini
 echo "🛠️ Compilazione e iniezione delle immagini Docker in locale (tramite gitops_build.sh)..."

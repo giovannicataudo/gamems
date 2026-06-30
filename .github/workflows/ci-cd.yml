@@ -43,35 +43,35 @@ jobs:
         run: |
           docker build -t ${{ env.IMAGE_PREFIX }}-user-service:${{ env.SHORT_SHA }} ./user-service
           docker push ${{ env.IMAGE_PREFIX }}-user-service:${{ env.SHORT_SHA }}
-          sed -i "s|image: ghcr.io/giovannicataudo/gamems-user-service.*|image: ${{ env.IMAGE_PREFIX }}-user-service:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/user.yml
+          sed -i "s|image: .*gamems-user-service.*|image: ${{ env.IMAGE_PREFIX }}-user-service:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/user.yml
 
       # BUILD & PUSH WALLET SERVICE
       - name: Build and push Wallet Service
         run: |
           docker build -t ${{ env.IMAGE_PREFIX }}-wallet-service:${{ env.SHORT_SHA }} ./wallet-service
           docker push ${{ env.IMAGE_PREFIX }}-wallet-service:${{ env.SHORT_SHA }}
-          sed -i "s|image: ghcr.io/giovannicataudo/gamems-wallet-service.*|image: ${{ env.IMAGE_PREFIX }}-wallet-service:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/wallet.yml
+          sed -i "s|image: .*gamems-wallet-service.*|image: ${{ env.IMAGE_PREFIX }}-wallet-service:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/wallet.yml
 
       # BUILD & PUSH GAME SERVICE
       - name: Build and push Game Service
         run: |
           docker build -t ${{ env.IMAGE_PREFIX }}-game-service:${{ env.SHORT_SHA }} ./game-service
           docker push ${{ env.IMAGE_PREFIX }}-game-service:${{ env.SHORT_SHA }}
-          sed -i "s|image: ghcr.io/giovannicataudo/gamems-game-service.*|image: ${{ env.IMAGE_PREFIX }}-game-service:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/game.yml
+          sed -i "s|image: .*gamems-game-service.*|image: ${{ env.IMAGE_PREFIX }}-game-service:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/game.yml
 
       # BUILD & PUSH API GATEWAY
       - name: Build and push API Gateway
         run: |
           docker build -t ${{ env.IMAGE_PREFIX }}-api-gateway:${{ env.SHORT_SHA }} ./api-gateway
           docker push ${{ env.IMAGE_PREFIX }}-api-gateway:${{ env.SHORT_SHA }}
-          sed -i "s|image: ghcr.io/giovannicataudo/gamems-api-gateway.*|image: ${{ env.IMAGE_PREFIX }}-api-gateway:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/gateway.yml
+          sed -i "s|image: .*gamems-api-gateway.*|image: ${{ env.IMAGE_PREFIX }}-api-gateway:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/gateway.yml
 
       # BUILD & PUSH FRONTEND APP
       - name: Build and push Frontend App
         run: |
           docker build -t ${{ env.IMAGE_PREFIX }}-frontend-app:${{ env.SHORT_SHA }} ./frontend-app
           docker push ${{ env.IMAGE_PREFIX }}-frontend-app:${{ env.SHORT_SHA }}
-          sed -i "s|image: ghcr.io/giovannicataudo/gamems-frontend-app.*|image: ${{ env.IMAGE_PREFIX }}-frontend-app:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/front.yml
+          sed -i "s|image: .*gamems-frontend-app.*|image: ${{ env.IMAGE_PREFIX }}-frontend-app:${{ env.SHORT_SHA }}|g" k8s/phase3_cloud/front.yml
 
       # COMMIT UPDATED YAML FILES
       - name: Commit and Push k8s manifest updates
