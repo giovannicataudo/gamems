@@ -17,9 +17,9 @@ data:
   # RISOLUZIONE DNS KUBERNETES INFRASTRUTTURA
   # ==========================================
   # Definiamo i nomi dei Service K8s a cui i pod dovranno connettersi.
-  DB_HOST: "postgres-service"
-  RABBIT_HOST: "rabbitmq-service"
-  REDIS_HOST: "redis-service"
+  DB_HOST: "postgres-service.gamems.svc.cluster.local"
+  RABBIT_HOST: "rabbitmq-service.gamems.svc.cluster.local"
+  REDIS_HOST: "redis-service.gamems.svc.cluster.local"
 
   # ==========================================
   # UTENTI
@@ -34,7 +34,7 @@ data:
   # RISOLUZIONE DNS KUBERNETES MICROSERVIZI
   # ==========================================
   # Questi nomi verranno letti dal Gateway e dal Game Service per farsi le chiamate interne
-  USER_HOST: "user-service"
-  WALLET_HOST: "wallet-service"
-  GAME_HOST: "game-service"
-  MAIL_HOST: "mailpit-service"
+  USER_HOST: "user-service.gamems.svc.cluster.local"
+  WALLET_HOST: "wallet-service.gamems.svc.cluster.local"
+  GAME_HOST: "game-service.gamems.svc.cluster.local"
+  MAIL_HOST: "mailpit-service.gamems.svc.cluster.local"
