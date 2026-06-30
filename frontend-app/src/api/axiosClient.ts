@@ -105,12 +105,6 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Se si verifica il 409 non facciamo nulla, semplicmente stampiamo in console
-    if (error.response && error.response.status === 409) {
-      console.warn("⚠️ Conflitto di concorrenza: operazione simultanea intercettata dal backend.");
-      return new Promise(()=>{});
-    }
-
     // Se l'errore non viene intercettato viene passato oltre
     return Promise.reject(error);
   }
