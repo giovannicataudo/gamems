@@ -57,9 +57,9 @@ Assicurati di avere ArgoCD installato nel tuo cluster e di aver applicato il fil
 
 **2. Compilazione e caricamento immagini (Sviluppo Locale):**
 Dato che l'infrastruttura locale utilizza `imagePullPolicy: Never` (per evitare download da registri remoti), devi prima compilare i servizi e caricare le immagini nel registro interno di K3s.
-Per farlo in un solo passaggio, usa il nuovo script ottimizzato per GitOps:
+Per farlo in un solo colpo (installando ArgoCD, le tue credenziali GitHub di sola lettura e buildando il codice), usa lo script di installazione globale:
 ```bash
-./gitops_build.sh
+./gitops_install.sh
 ```
 *Questo script si limita a compilare il codice Java, buildare le immagini Docker e iniettarle in K3s, senza riavviare o toccare lo stato del cluster, delegando l'orchestrazione interamente ad ArgoCD.*
 
