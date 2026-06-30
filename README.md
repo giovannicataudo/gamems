@@ -76,6 +76,27 @@ Dopodiché, apri il browser su: `https://gamems.local`.
 - **Redis UI (Commander):** `http://localhost:32081`
 - **Mailpit UI:** `http://localhost:32025`
 
+---
+
+## 📜 Guida agli Script (A cosa servono?)
+Nella repository troverai vari script bash, ognuno pensato per uno scopo preciso a seconda di come vuoi gestire il cluster.
+
+**Script per GitOps (Nuovo standard):**
+- `gitops_install.sh`: Installa ArgoCD da zero, chiede il tuo token GitHub Read-Only e avvia l'intera architettura in automatico.
+- `gitops_build.sh`: Compila il Java, builda le immagini Docker e le inietta in K3s. Usalo dopo ogni modifica al codice quando l'infrastruttura è già gestita da ArgoCD.
+
+**Script Imperativi (Senza ArgoCD):**
+Se per qualsiasi motivo non vuoi usare ArgoCD e preferisci gestire Kubernetes in modo "classico" e manuale:
+- `deploy_to_k3s.sh`: Script "All-in-One" imperativo. Compila il codice, inietta le immagini in K3s e applica tutti i file YAML nell'ordine corretto tramite il comando `start.sh`.
+- `start.sh`: Applica manualmente i file della cartella `k8s/` rispettando delle pause fisse (`sleep`) per aspettare l'avvio dei database.
+- `stop.sh`: Scala a zero le repliche di tutti i deployment, spegnendo l'infrastruttura senza distruggere i file YAML (utile per liberare RAM). *Attenzione: non usare questo script se c'è ArgoCD, perché lui li riaccenderà subito!*
+
+**Esempio di avvio SENZA ArgoCD:**
+```bash
+./deploy_to_k3s.sh
+```
+Questo script eseguirà compilazione, build e il deployment sul cluster Kubernetes, occupandosi lui stesso di orchestrare la creazione delle risorse al posto di ArgoCD.
+
 ## 🔒 Sicurezza
 
 **Traffico Esterno (HTTPS):**
