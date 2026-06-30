@@ -72,7 +72,7 @@ export default function AuthPage() {
       <div className="bg-slate-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
         
         <h2 className="text-3xl font-bold text-white text-center mb-6">
-          {mode === 'login' && 'Accedi al Gioco'}
+          {mode === 'login' && 'Accedi a GameMS V2'}
           {mode === 'register' && 'Crea un Account'}
           {mode === 'mfa' && 'Verifica a Due Passi'}
         </h2>

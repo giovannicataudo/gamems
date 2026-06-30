@@ -16,6 +16,8 @@ spec:
     metadata:
       labels:
         app: frontend
+      annotations:
+        gitops.version: "v2"
     spec:
       containers:
       - name: frontend
