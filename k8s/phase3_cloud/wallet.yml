@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: wallet-service
-        image: ghcr.io/giovannicataudo/gamems-wallet-service:9d9f8be
+        image: ghcr.io/giovannicataudo/gamems-wallet-service:56d3bdd
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8082
