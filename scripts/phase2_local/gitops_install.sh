@@ -32,7 +32,7 @@ fi
 # 3. Installazione ArgoCD
 echo "📦 Installazione di ArgoCD nel cluster (se non presente)..."
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
 echo "⏳ Attesa che i componenti di ArgoCD siano pronti (potrebbe volerci un minuto)..."
 kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s

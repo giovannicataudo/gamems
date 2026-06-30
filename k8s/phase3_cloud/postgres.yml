@@ -57,6 +57,7 @@ spec:
       - name: postgres
         image: postgres:15-alpine
         imagePullPolicy: IfNotPresent
+        args: ["-c", "max_connections=250"]
         ports:
         - containerPort: 5432
         env:
