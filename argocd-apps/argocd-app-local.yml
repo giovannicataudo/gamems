@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: 'https://github.com/giovannicataudo/gamems.git'
     targetRevision: main
-    path: k8s
+    path: k8s/phase2_local
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: gamems

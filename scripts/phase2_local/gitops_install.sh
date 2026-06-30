@@ -51,17 +51,17 @@ kubectl label secret gamems-repo-secret argocd.argoproj.io/secret-type=repositor
 
 # 5. Build delle immagini
 echo "🛠️ Compilazione e iniezione delle immagini Docker in locale (tramite gitops_build.sh)..."
-if [ -f "./gitops_build.sh" ]; then
-    chmod +x ./gitops_build.sh
-    ./gitops_build.sh
+if [ -f "./scripts/phase2_local/gitops_build.sh" ]; then
+    chmod +x ./scripts/phase2_local/gitops_build.sh
+    ./scripts/phase2_local/gitops_build.sh
 else
-    echo "❌ Errore: gitops_build.sh non trovato nella cartella corrente!"
+    echo "❌ Errore: gitops_build.sh non trovato!"
     exit 1
 fi
 
 # 6. Applicazione dell'app ArgoCD
 echo "🚀 Avvio della sincronizzazione GitOps..."
-kubectl apply -f argocd-app.yml
+kubectl apply -f argocd-apps/argocd-app-local.yml
 kubectl annotate application gamems -n argocd argocd.argoproj.io/refresh=hard --overwrite || true
 
 echo "============================================================"

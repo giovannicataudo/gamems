@@ -1,0 +1,108 @@
+# ==========================================
+# POSTGRESQL
+# ==========================================
+# Dichiarazione PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+# Config map con init.sql
+apiVersion: v1
+kind: ConfigMap
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
+  name: postgres-init-script
+data:
+  init.sql: |
+    CREATE USER user_user WITH PASSWORD 'user_pass';
+    CREATE USER game_user WITH PASSWORD 'game_pass';
+    CREATE USER wallet_user WITH PASSWORD 'wallet_pass';
+    CREATE DATABASE user_db OWNER user_user;
+    CREATE DATABASE game_db OWNER game_user;
+    CREATE DATABASE wallet_db OWNER wallet_user;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: gamems-config
+              key: PG_ROOT_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gamems-secrets
+              key: PG_ROOT_PASS
+        volumeMounts:
+        - name: init-script-volume
+          mountPath: /docker-entrypoint-initdb.d/init.sql
+          subPath: init.sql
+        - name: postgres-data-volume
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "384Mi"
+            cpu: "1000m"
+      volumes:
+      - name: init-script-volume
+        configMap:
+          name: postgres-init-script
+      - name: postgres-data-volume
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

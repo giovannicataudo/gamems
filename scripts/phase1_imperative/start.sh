@@ -2,7 +2,7 @@
 
 # Configurazione
 NAMESPACE="gamems"
-K8S_DIR="./k8s"
+K8S_DIR="./k8s/phase2_local"
 
 echo "🚀 Avvio automazione infrastruttura gamems kub..."
 

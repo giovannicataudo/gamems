@@ -53,11 +53,11 @@ echo "✅ Immagini caricate con successo nel registro di K3s!"
 
 echo "♻️ [4/4] Riavvio dell'infrastruttura Kubernetes..."
 echo "Spegni l'infrastruttura corrente se accesa..."
-./stop.sh
+./scripts/phase1_imperative/stop.sh
 echo "Attendo 5 secondi per garantire la chiusura dei pod..."
 sleep 5
 echo "Riavvio l'infrastruttura..."
-./start.sh
+./scripts/phase1_imperative/start.sh
 
 echo "========================================="
 echo "🎉 TUTTO PRONTO! IL CLUSTER È AGGIORNATO 🎉"

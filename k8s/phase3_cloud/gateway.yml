@@ -1,0 +1,78 @@
+# ==========================================
+# API GATEWAY (Porta 8080)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "3"
+  name: api-gateway-deployment
+  namespace: gamems
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      imagePullSecrets:
+      - name: gamems-registry-secret
+      containers:
+      - name: api-gateway
+        image: ghcr.io/giovannicataudo/gamems-api-gateway:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx256m"
+        - name: HEALTH_SHOW_DETAILS
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: HEALTH_SHOW_DETAILS } }
+        - name: ALLOWED_ORIGINS
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: ALLOWED_ORIGINS } }
+        - name: RABBIT_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: RABBIT_HOST } }
+        - name: RABBIT_USER
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: RABBIT_USER } }
+        - name: RABBIT_PASS
+          valueFrom: { secretKeyRef: { name: gamems-secrets, key: RABBIT_PASS } }
+        - name: REDIS_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: REDIS_HOST } }
+        - name: USER_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: USER_HOST } }
+        - name: GAME_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: GAME_HOST } }
+        - name: WALLET_HOST
+          valueFrom: { configMapKeyRef: { name: gamems-config, key: WALLET_HOST } }
+        # --- SOVRASCRITTURA DELLE CHIAVI DI SICUREZZA ---
+        - name: APP_API_KEY
+          valueFrom: { secretKeyRef: { name: gamems-secrets, key: APP_API_KEY } }
+        - name: APP_JWT_SECRET
+          valueFrom: { secretKeyRef: { name: gamems-secrets, key: APP_JWT_SECRET } }
+        - name: APP_INTERNAL_SECRET
+          valueFrom: { secretKeyRef: { name: gamems-secrets, key: APP_INTERNAL_SECRET } }
+        resources:
+          requests: { memory: "256Mi", cpu: "100m" }
+          limits: { memory: "512Mi", cpu: "800m" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "3"
+  name: api-gateway
+  namespace: gamems
+spec:
+  selector:
+    app: api-gateway
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

@@ -1,0 +1,214 @@
+# ==========================================
+# 1. CHIUDIAMO TUTTE LE PORTE IN ENTRATA
+# ==========================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: default-deny-ingress
+  namespace: gamems
+spec:
+  podSelector: {} # Applica a tutti
+  policyTypes:
+  - Ingress
+  # Non essendoci regole, nessuno può ricevere traffico.
+
+---
+# ==========================================
+# 2. REGOLE DEL FRONTEND E DELL'API GATEWAY
+# ==========================================
+# Il Frontend accetta traffico solo dall'ingress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-frontend
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: frontend }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+---
+# Il Gateway accetta chiamate SOLO dal Frontend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-gateway
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: api-gateway }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels: { app: frontend }
+
+---
+# ==========================================
+# 3. REGOLE DEI MICROSERVIZI JAVA (Backend)
+# ==========================================
+# User, Wallet e Game accettano chiamate dal Gateway. 
+# In aggiunta, il Wallet accetta chiamate dal Game.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-user-service
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: user-service }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: { matchLabels: { app: api-gateway } }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-game-service
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: game-service }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: { matchLabels: { app: api-gateway } }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-wallet-service
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: wallet-service }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: { matchLabels: { app: api-gateway } }
+    - podSelector: { matchLabels: { app: game-service } }
+
+---
+# ==========================================
+# 4. REGOLE DEI DATABASES E BROKERS
+# ==========================================
+# Postgres accetta solo i 3 microservizi Java e Adminer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-postgres
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: postgres }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: { matchLabels: { app: user-service } }
+    - podSelector: { matchLabels: { app: wallet-service } }
+    - podSelector: { matchLabels: { app: game-service } }
+    - podSelector: { matchLabels: { app: adminer } }
+---
+# Redis accetta tutto il backend Java, Gateway compreso, e Redis Commander
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-redis
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: redis }
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: { matchLabels: { app: api-gateway } }
+    - podSelector: { matchLabels: { app: user-service } }
+    - podSelector: { matchLabels: { app: wallet-service } }
+    - podSelector: { matchLabels: { app: game-service } }
+    - podSelector: { matchLabels: { app: redis-commander } }
+---
+# RabbitMQ (Protocollo AMQP) accetta il backend Java
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-rabbitmq
+  namespace: gamems
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+  - ports:
+    - port: 5672 # Solo il protocollo interno
+    from:
+    - podSelector: { matchLabels: { app: api-gateway } }
+    - podSelector: { matchLabels: { app: user-service } }
+    - podSelector: { matchLabels: { app: wallet-service } }
+    - podSelector: { matchLabels: { app: game-service } }
+  - ports:
+    - port: 15672
+
+---
+# ==========================================
+# 5. REGOLE DEI TOOLS ESTERNI
+# ==========================================
+# Adminer e Redis Commander accessibili dal tuo browser (Tutti)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
+  name: allow-management-tools
+  namespace: gamems
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [adminer, redis-commander, mailpit]
+  policyTypes: [Ingress]
+  ingress:
+  - {}

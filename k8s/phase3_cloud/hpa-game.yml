@@ -1,0 +1,27 @@
+# ==========================================
+# HORIZONTAL POD AUTOSCALER (HPA)
+# Target: Game Deployment (CPU Bound)
+# ==========================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "2"
+  name: game-hpa
+  namespace: gamems
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: game-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
