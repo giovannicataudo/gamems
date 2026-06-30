@@ -4,6 +4,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
   name: redis-deployment
 spec:
   replicas: 1
@@ -32,6 +36,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
   name: redis-service
 spec:
   selector:

@@ -5,6 +5,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
   name: postgres-pvc
 spec:
   accessModes:
@@ -17,6 +21,10 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
   name: postgres-init-script
 data:
   init.sql: |
@@ -30,6 +38,10 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
   name: postgres-deployment
 spec:
   replicas: 1
@@ -82,6 +94,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "1"
   name: postgres-service
 spec:
   selector:

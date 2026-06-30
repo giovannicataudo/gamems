@@ -10,6 +10,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "3"
   name: adminer-deployment
 spec:
   replicas: 1
@@ -38,6 +42,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "3"
   name: adminer-service
 spec:
   type: NodePort

@@ -4,6 +4,10 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: default-deny-ingress
   namespace: gamems
 spec:
@@ -20,6 +24,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-frontend
   namespace: gamems
 spec:
@@ -36,6 +44,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-gateway
   namespace: gamems
 spec:
@@ -56,6 +68,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-user-service
   namespace: gamems
 spec:
@@ -69,6 +85,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-game-service
   namespace: gamems
 spec:
@@ -82,6 +102,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-wallet-service
   namespace: gamems
 spec:
@@ -101,6 +125,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-postgres
   namespace: gamems
 spec:
@@ -118,6 +146,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-redis
   namespace: gamems
 spec:
@@ -136,6 +168,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-rabbitmq
   namespace: gamems
 spec:
@@ -161,6 +197,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "0"
   name: allow-management-tools
   namespace: gamems
 spec:

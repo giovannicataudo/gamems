@@ -5,6 +5,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "2"
   name: wallet-deployment
   namespace: gamems
 spec:
@@ -51,6 +55,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "2"
   name: wallet-service
   namespace: gamems
 spec:

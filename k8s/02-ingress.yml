@@ -10,6 +10,8 @@ metadata:
   name: gamems-ingress
   namespace: gamems
   annotations:
+
+    argocd.argoproj.io/sync-wave: "4"
     # Abilita l'http (se non si vuole forzare https mettere false, ma per ora lo forziamo)
     ingress.kubernetes.io/ssl-redirect: "true" 
 spec:

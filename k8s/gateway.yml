@@ -4,6 +4,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "3"
   name: api-gateway-deployment
   namespace: gamems
 spec:
@@ -57,6 +61,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+
+  annotations:
+
+    argocd.argoproj.io/sync-wave: "3"
   name: api-gateway
   namespace: gamems
 spec:
