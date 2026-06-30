@@ -65,7 +65,7 @@ kubectl wait --for=condition=ready pod -l app=frontend --timeout=60s -n $NAMESPA
 echo "========================================="
 echo "🎉 INFRASTRUTTURA AVVIATA CON SUCCESSO 🎉"
 echo "========================================="
-echo "🔗 App Principale: http://gamems.local"
+echo "🔗 App Principale: https://gamems.local"
 echo "🗄️  Database UI:  http://localhost:32080"
 echo "🐇 RabbitMQ UI:  http://localhost:31672"
 echo "🔴 Redis UI:     http://localhost:32081"
